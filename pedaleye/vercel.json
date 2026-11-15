@@ -3,5 +3,8 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
-  "regions": ["icn1"]
+  "regions": [
+    "icn1"
+  ],
+  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]"
 }
