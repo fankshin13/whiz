@@ -132,8 +132,18 @@
     transform: rotate(360deg);
   }
 }
+/* 화면 점멸은 초당 3회 미만(WCAG 2.3.1 광과민성 기준). 실물 LED 는 컨트롤러가 10Hz 로 점멸한다. */
+.led-flash {
+  animation: led-flash 0.8s steps(1, end) infinite;
+}
+@keyframes led-flash {
+  50% {
+    opacity: 0.45;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  .spinner,
+  .led-flash {
     animation: none;
   }
 }

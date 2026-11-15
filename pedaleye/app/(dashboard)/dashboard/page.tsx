@@ -1,10 +1,12 @@
-import { Car, CheckCircle2, Plus } from "lucide-react";
+import { Car, CheckCircle2, Cpu, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
+import { PedalLiveDashboard } from "@/components/telemetry/pedal-live-dashboard";
+import { isFactoryCalibration, listCalibrationTargets } from "@/lib/calibration/operations";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
 import { allowedRolesForPath } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +29,10 @@ export default async function DashboardPage({
     .order("plate_number");
   if (error) throw new Error(`차량 목록 조회 실패 (${error.code})`);
 
+  // 실시간 모니터링은 본인 단말이 있는 운전자에게 보여 준다
+  const liveDevice =
+    user.role === "driver" ? (await listCalibrationTargets(supabase, user)).find((d) => !isFactoryCalibration(d)) : undefined;
+
   return (
     <>
       <PageHeader
@@ -47,6 +53,29 @@ export default async function DashboardPage({
           <CheckCircle2 aria-hidden="true" size={20} className="text-accel" />
           페달 영점 및 가동 범위 보정이 정상 저장되었습니다.
         </p>
+      ) : null}
+
+      {user.role === "driver" ? (
+        liveDevice ? (
+          <PedalLiveDashboard
+            plateNumber={liveDevice.plateNumber}
+            calibration={{
+              accelCalibMin: liveDevice.accelCalibMin,
+              accelCalibMax: liveDevice.accelCalibMax,
+              brakeCalibMin: liveDevice.brakeCalibMin,
+              brakeCalibMax: liveDevice.brakeCalibMax,
+            }}
+          />
+        ) : (
+          <Section id="live-empty-heading" title="실시간 페달 모니터링">
+            <EmptyState icon={Cpu} title="연결된 페달아이 단말기가 없습니다.">
+              <p className="m-0">먼저 기기 등록 및 페달 캘리브레이션을 진행해주세요.</p>
+              <Link href="/devices/calibrate" className="btn mt-4">
+                페달 캘리브레이션 시작하기
+              </Link>
+            </EmptyState>
+          </Section>
+        )
       ) : null}
 
       <Section id="vehicles-heading" title="조회 가능한 차량">

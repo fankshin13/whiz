@@ -62,6 +62,16 @@ export async function listCalibrationTargets(supabase: Client, user: Operator): 
     }));
 }
 
+/** 공장 기본값(0~4095) 그대로면 아직 캘리브레이션 전이다. */
+export function isFactoryCalibration(device: DeviceCalibrationData): boolean {
+  return (
+    device.accelCalibMin === 0 &&
+    device.accelCalibMax === 4095 &&
+    device.brakeCalibMin === 0 &&
+    device.brakeCalibMax === 4095
+  );
+}
+
 /** 단말 하나의 보정 정보. 권한 밖의 deviceId 는 null(존재 여부도 숨김). driver 는 생략 시 본인 단말. */
 export async function getDeviceCalibrationProjection(
   supabase: Client,
