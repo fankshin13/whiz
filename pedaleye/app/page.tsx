@@ -1,4 +1,9 @@
-// 임시 진입점: "앱 셸과 네비게이션 구조" 작업에서 교체됩니다.
-export default function Home() {
-  return <main />;
+import { redirect } from "next/navigation";
+
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { homePathForRole } from "@/lib/auth/roles";
+
+export default async function Home() {
+  const user = await getCurrentUser();
+  redirect(user ? homePathForRole(user.role) : "/auth/login");
 }

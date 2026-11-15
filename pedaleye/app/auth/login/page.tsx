@@ -20,14 +20,12 @@ export default async function LoginPage({
   if (user) redirect(postLoginPath(user.role, requested));
 
   return (
-    <main className="page" style={{ maxWidth: 440, minHeight: "100dvh", alignContent: "center" }}>
-      <div style={{ display: "grid", gap: "var(--space-2)" }}>
-        <h1>페달아이 로그인</h1>
-        <p className="muted" style={{ margin: 0 }}>
-          관리자에게 받은 계정의 이메일과 비밀번호를 입력해 주세요.
-        </p>
+    <>
+      <div className="grid gap-2">
+        <h1 className="m-0 text-h1 font-bold">관리자 콘솔 로그인</h1>
+        <p className="m-0 text-text-muted">관리자에게 받은 계정의 이메일과 비밀번호를 입력해 주세요.</p>
       </div>
       <LoginForm redirectTo={requested} />
-    </main>
+    </>
   );
 }
