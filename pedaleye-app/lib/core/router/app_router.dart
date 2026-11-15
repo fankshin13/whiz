@@ -9,11 +9,13 @@ import '../../features/auth/presentation/session_screens.dart';
 import '../../features/calibration/presentation/pedal_calibration_screen.dart';
 import '../../features/gauge/presentation/pedal_gauge_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
-import '../../features/records/presentation/records_placeholder_screen.dart';
+import '../../features/events/presentation/driver_event_detail_screen.dart';
+import '../../features/events/presentation/driver_event_list_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 
 const _signedOutPaths = {'/login', '/invite'};
-const _driverPaths = {'/home', '/calibrate', '/gauge', '/records'};
+bool _isDriverPath(String path) =>
+    const {'/home', '/calibrate', '/gauge', '/records'}.contains(path) || path.startsWith('/records/');
 
 /// 딥링크 pedaleye://invite?token=… 는 호스트가 'invite' 라 경로로 바꿔 준다.
 /// 웹 초대 주소(…/auth/invite?token=…)를 앱 링크로 받는 경우도 같은 화면으로 보낸다.
@@ -38,7 +40,7 @@ String? sessionRedirect(SessionStatus status, Uri uri) {
     SessionStatus.notDriver => '/not-driver',
     SessionStatus.roleCheckFailed => '/connect-error',
     SessionStatus.signedOut => _signedOutPaths.contains(path) ? null : '/login',
-    SessionStatus.driver => _driverPaths.contains(path) ? null : '/home',
+    SessionStatus.driver => _isDriverPath(path) ? null : '/home',
   };
   return target == path ? null : target;
 }
@@ -72,7 +74,22 @@ GoRouter createRouter(SessionController session) {
             routes: [GoRoute(path: '/calibrate', builder: (context, state) => const PedalCalibrationScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/records', builder: (context, state) => const RecordsPlaceholderScreen())],
+            routes: [
+              GoRoute(
+                path: '/records',
+                builder: (context, state) => const DriverEventListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    // 같은 화면에서 다른 기록으로 이동하면(업로드 후 서버 기록) 새로 불러오도록 키를 준다
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return DriverEventDetailScreen(key: ValueKey(id), id: id);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

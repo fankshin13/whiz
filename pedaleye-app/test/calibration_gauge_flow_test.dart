@@ -252,4 +252,30 @@ void main() {
     await pumpApp(tester, auth: fakeAuth());
     expect(find.byType(PedalGaugeScreen), findsNothing);
   });
+
+  testWidgets('단말 조회 실패 → 다시 시도로 복구(보정·게이지)', (tester) async {
+    final devices = FakeDeviceRepository(calibratedDevice)..loadFails = true;
+    await pumpApp(
+      tester,
+      auth: fakeAuth(signedInAs: driverId),
+      devices: devices,
+    );
+    await openCalibration(tester);
+    expect(find.text(keepAll('단말기 정보를 불러올 수 없습니다.')), findsOneWidget);
+    devices.loadFails = false;
+    await tester.tap(find.widgetWithText(FilledButton, '다시 시도'));
+    await run(tester, const Duration(milliseconds: 300));
+    expect(find.text('1단계: 가속 페달 영점(0%)'), findsOneWidget);
+
+    devices.loadFails = true;
+    await tester.tap(find.text('홈'));
+    await run(tester, const Duration(milliseconds: 300));
+    await tester.tap(find.widgetWithText(FilledButton, '실시간 페달 게이지'));
+    await run(tester, const Duration(milliseconds: 300));
+    expect(find.text(keepAll('단말기 정보를 불러올 수 없습니다.')), findsOneWidget);
+    devices.loadFails = false;
+    await tester.tap(find.widgetWithText(FilledButton, '다시 시도'));
+    await run(tester, const Duration(milliseconds: 300));
+    expect(find.text('대기중'), findsOneWidget);
+  });
 }

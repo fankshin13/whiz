@@ -6,6 +6,8 @@ import 'features/auth/application/session_controller.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
 import 'features/calibration/data/device_repository.dart';
+import 'features/events/application/event_sync_controller.dart';
+import 'features/events/data/driver_events_repository.dart';
 import 'features/home/data/driver_home_repository.dart';
 
 /// 화면이 쓰는 의존성 묶음. 테스트에서는 가짜 저장소로 바꿔 끼운다.
@@ -19,6 +21,8 @@ class AppScope extends InheritedWidget {
     required this.devices,
     required this.sensorFactory,
     required this.warningFeedback,
+    required this.events,
+    required this.eventSync,
     required this.webConsoleUrl,
     required super.child,
   });
@@ -32,6 +36,8 @@ class AppScope extends InheritedWidget {
   /// 지금은 모의 센서, 단말 규격이 정해지면 BLE 센서를 만든다
   final PedalSensorFactory sensorFactory;
   final WarningFeedback warningFeedback;
+  final DriverEventsRepository events;
+  final EventSyncController eventSync;
   final Uri webConsoleUrl;
 
   static AppScope of(BuildContext context) {

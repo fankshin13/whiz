@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { jsonResponse, readLimitedJson } from "@/lib/invitations/http";
+import { jsonResponse, readLimitedJson } from "@/lib/server/mobile-api";
 import { acceptInvitation } from "@/lib/invitations/operations";
 import { createRateLimiter } from "@/lib/server/rate-limit";
 import { createAdminClient } from "@/lib/server/supabase-admin";

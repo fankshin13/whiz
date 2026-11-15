@@ -83,7 +83,12 @@ class _PedalCalibrationScreenState extends State<PedalCalibrationScreen> {
                   title: '단말기 정보를 불러올 수 없습니다.',
                   message: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
                   actions: [
-                    FilledButton(onPressed: () => setState(() => _device = _load()), child: const Text('다시 시도')),
+                    FilledButton(
+                      onPressed: () => setState(() {
+                        _device = _load();
+                      }),
+                      child: const Text('다시 시도'),
+                    ),
                   ],
                 ),
               ],

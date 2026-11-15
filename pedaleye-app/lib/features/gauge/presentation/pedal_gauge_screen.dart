@@ -14,6 +14,7 @@ import '../../../core/widgets/screen_body.dart';
 import '../../../core/widgets/status_message.dart';
 import '../../calibration/data/device_repository.dart';
 import '../../calibration/domain/driver_device.dart';
+import '../../events/presentation/event_widgets.dart';
 import 'mock_sensor_panel.dart';
 import 'pedal_gauge_widgets.dart';
 
@@ -57,6 +58,18 @@ class _PedalGaugeScreenState extends State<PedalGaugeScreen> {
       appBar: AppBar(
         title: const Text('실시간 페달 게이지'),
         leading: IconButton(tooltip: '홈으로', icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/home')),
+        actions: [
+          // 이상 조작을 느끼면 바로 누를 수 있게 상단에 둔다
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s2),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.brake, foregroundColor: AppColors.bgBase),
+              onPressed: () => runEventBackup(context, BackupKind.manual),
+              icon: const Icon(Icons.shield_outlined, size: 20),
+              label: const Text('긴급 백업'),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<DriverDevice?>(
         future: _device,
@@ -74,7 +87,12 @@ class _PedalGaugeScreenState extends State<PedalGaugeScreen> {
                   title: '단말기 정보를 불러올 수 없습니다.',
                   message: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
                   actions: [
-                    FilledButton(onPressed: () => setState(() => _device = _load()), child: const Text('다시 시도')),
+                    FilledButton(
+                      onPressed: () => setState(() {
+                        _device = _load();
+                      }),
+                      child: const Text('다시 시도'),
+                    ),
                   ],
                 ),
               ],

@@ -21,6 +21,10 @@ abstract final class AppColors {
   /// 오류 문구 전용(흰 배경 대비 4.5:1 이상). 제동 색(#FF3B30)은 글자색으로 쓰면 대비가 모자란다.
   static const critical = Color(0xFFB91C1C);
   static const criticalBg = Color(0xFFFEF2F2);
+
+  /// 상태(검증 통과) 전용. 웹 --color-good 과 같은 값
+  static const good = Color(0xFF15803D);
+  static const goodBg = Color(0xFFF0FDF4);
 }
 
 /// 4dp 그리드 간격

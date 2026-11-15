@@ -172,5 +172,52 @@ void main() {
       await run(tester, 3300);
       await shot(tester, '14-gauge-lost');
     });
+
+    testWidgets('$width 사고 기록', (tester) async {
+      size(tester);
+      final server = FakeEventsRepository();
+      final net = FakeConnectivity(online: true);
+      final sync = newEventSync(server: server, connectivity: net);
+      await pumpApp(
+        tester,
+        auth: fakeAuth(signedInAs: driverId),
+        events: server,
+        eventSync: sync,
+      );
+      await tester.tap(find.text('사고 기록').last);
+      await tester.pumpAndSettle();
+      await shot(tester, '15-records-empty');
+
+      final t = tamperedSession();
+      server.addFromPel((await MemoryBackupStore().save('u', calibratedDevice.deviceId, t)), t.bytes);
+      await tester.tap(find.widgetWithText(FilledButton, '긴급 백업'));
+      await tester.pumpAndSettle();
+      net.online = false;
+      await tester.ensureVisible(find.widgetWithText(OutlinedButton, '급제동 시뮬레이션'));
+      await tester.tap(find.widgetWithText(OutlinedButton, '급제동 시뮬레이션'));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await shot(tester, '16-records-list');
+
+      await tester.tap(find.textContaining('수동 긴급 백업').first);
+      await tester.pumpAndSettle();
+      await shot(tester, '17-record-detail');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(SingleChildScrollView).last, const Offset(0, -330));
+      await tester.pumpAndSettle();
+      final chart = find
+          .byType(GestureDetector)
+          .evaluate()
+          .map((e) => e.widget)
+          .whereType<GestureDetector>()
+          .where((g) => g.onHorizontalDragUpdate != null)
+          .first;
+      await tester.tapAt(tester.getCenter(find.byWidget(chart)) + const Offset(10, 0));
+      await tester.pumpAndSettle();
+      await shot(tester, '18-record-chart');
+    });
   }
 }

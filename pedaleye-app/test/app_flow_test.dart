@@ -238,7 +238,7 @@ void main() {
     expect(find.text('1단계: 가속 페달 영점(0%)'), findsOneWidget);
     await tester.tap(find.text('사고 기록').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining(keepAll('사고 기록 백업')), findsOneWidget);
+    expect(find.text('내 사고 기록'), findsOneWidget);
     await tester.tap(find.text('홈'));
     await tester.pumpAndSettle();
     expect(find.text('12가 3456'), findsOneWidget);

@@ -53,7 +53,7 @@ class InviteRepository {
             body: jsonEncode(payload),
           )
           .timeout(_timeout);
-      final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+      final decoded = response.bodyBytes.isEmpty ? null : jsonDecode(utf8.decode(response.bodyBytes));
       return (response.statusCode, decoded is Map<String, dynamic> ? decoded : const <String, dynamic>{});
     } on SocketException {
       throw const InviteNetworkException();
