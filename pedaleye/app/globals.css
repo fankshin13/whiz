@@ -24,6 +24,11 @@
   --color-good-bg: #f0fdf4;
   --color-critical: #b91c1c;
   --color-critical-bg: #fef2f2;
+  /* 범주형 데이터 계열(관제 이벤트 유형). 고정 순서로만 쓰고 의미 색(가속·제동)과 섞지 않는다. 색각 검증 통과 */
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
+  --color-series-3: #1baf7a;
+  --color-series-4: #eda100;
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -45,7 +50,6 @@
   --radius-md: 8px; /* 컴포넌트 기본 */
   --radius-lg: 12px; /* 카드·모달 */
 
-  --breakpoint-lg: 1024px; /* 사이드바 노출 기준 */
 
   --size-touch: 48px; /* 운전석 환경 최소 터치 영역(WCAG 44px 이상) */
   --size-sidebar: 256px;

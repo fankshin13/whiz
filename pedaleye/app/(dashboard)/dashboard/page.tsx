@@ -1,7 +1,10 @@
 import { AlertTriangle, Car, CheckCircle2, Cpu, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { FleetDashboardSkeleton } from "@/components/dashboard/fleet-dashboard-skeleton";
+import { FleetMonitoringDashboard } from "@/components/dashboard/fleet-monitoring-dashboard";
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
@@ -10,6 +13,7 @@ import { PedalLiveDashboard } from "@/components/telemetry/pedal-live-dashboard"
 import { isFactoryCalibration, listCalibrationTargets } from "@/lib/calibration/operations";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
 import { allowedRolesForPath } from "@/lib/auth/roles";
+import { PERIOD_OPTIONS } from "@/lib/fleet/overview";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "대시보드 | 페달아이" };
@@ -24,10 +28,12 @@ const eventTime = new Intl.DateTimeFormat("ko-KR", {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ calibrated?: string }>;
+  searchParams: Promise<{ calibrated?: string; days?: string }>;
 }) {
   const user = await requireUserForPath("/dashboard");
-  const { calibrated } = await searchParams;
+  const { calibrated, days } = await searchParams;
+  const isFleetManager = user.role === "super_admin" || user.role === "org_admin";
+  const periodDays = PERIOD_OPTIONS.find((d) => String(d) === days) ?? 7;
   const canManageVehicles = allowedRolesForPath("/vehicles")?.includes(user.role) ?? false;
 
   const supabase = await createClient();
@@ -54,7 +60,11 @@ export default async function DashboardPage({
     <>
       <PageHeader
         title="대시보드"
-        description="조회 권한이 있는 차량과 최근 페달 기록 현황을 확인합니다."
+        description={
+          isFleetManager
+            ? "소속 차량의 단말 연결 상태와 이상 운전(사고 세션) 현황을 한눈에 관제합니다."
+            : "조회 권한이 있는 차량과 최근 페달 기록 현황을 확인합니다."
+        }
         action={
           canManageVehicles ? (
             <Link href="/vehicles" className="btn">
@@ -108,6 +118,11 @@ export default async function DashboardPage({
 
       {liveDevice ? <EventRecorderSimulator deviceId={liveDevice.deviceId} /> : null}
 
+      {isFleetManager ? (
+        <Suspense key={periodDays} fallback={<FleetDashboardSkeleton />}>
+          <FleetMonitoringDashboard periodDays={periodDays} />
+        </Suspense>
+      ) : (
       <Section id="vehicles-heading" title="조회 가능한 차량">
         {vehicles.length === 0 ? (
           <EmptyState icon={Car} title="등록된 주행 차량 및 최근 이벤트가 없습니다.">
@@ -132,6 +147,7 @@ export default async function DashboardPage({
           </ul>
         )}
       </Section>
+      )}
     </>
   );
 }

@@ -149,5 +149,12 @@ export async function uploadEventSession(
     return FAILED;
   }
 
+  // 세션이 올라왔다는 것은 앱이 단말과 연결됐다는 뜻이므로 동기화 시각을 갱신한다(관제 '정상/주의' 판정 근거)
+  const { error: syncError } = await admin
+    .from("devices")
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq("id", payload.deviceId);
+  if (syncError) console.error("uploadEventSession last_synced_at update failed", { code: syncError.code });
+
   return result(sessionId, false);
 }

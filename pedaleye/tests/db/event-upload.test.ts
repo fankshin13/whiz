@@ -73,6 +73,10 @@ describe("사고 세션 업로드", () => {
     expect(download.error).toBeNull();
     expect(download.data?.size).toBe(1200 * 64 + 32);
 
+    // 업로드하면 단말 동기화 시각이 갱신된다(관제 '정상/주의' 판정 근거)
+    const { data: synced } = await adminClient().from("devices").select("last_synced_at").eq("id", DEVICE_A).single();
+    expect(Date.now() - Date.parse(synced?.last_synced_at ?? "0")).toBeLessThan(60_000);
+
     // 같은 세션 재업로드 → 새로 만들지 않고 기존 세션 반환
     const again = await uploadEventSession(driver, adminClient(), DRIVER_A, input());
     expect(again).toMatchObject({ success: true, sessionId: result.sessionId, duplicate: true });
