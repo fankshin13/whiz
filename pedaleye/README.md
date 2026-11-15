@@ -66,6 +66,7 @@ pnpm dev
 
 ### 2. Vercel
 1. 새 프로젝트, Root Directory = `pedaleye`, Framework = Next.js (`vercel.json` 이 서울 리전 `icn1`·pnpm 을 지정)
+   - Git 연결 시 운영 브랜치 = `master`. `vercel.json` 의 `ignoreCommand` 가 운영(production)이 아닌 배포는 빌드를 건너뛰게 해 미리보기 배포를 끈다(환경 변수가 Production 에만 있으므로). 미리보기가 필요해지면 이 줄을 지우고 Preview 용 환경 변수(별도 Supabase)를 넣는다.
 2. Environment Variables(Production) — 값은 Supabase 대시보드 Project Settings → API 에서 복사
 
    | 이름 | 값 | 비고 |
