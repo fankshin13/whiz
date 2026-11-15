@@ -1,10 +1,10 @@
-import { ShieldCheck, Upload } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
-import { PendingAction } from "@/components/page/pending-action";
+import { LogFileUploader } from "@/components/forensics/log-file-uploader";
 import { Section } from "@/components/page/section";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
@@ -38,18 +38,13 @@ export default async function EventsPage() {
       <PageHeader
         title="사고 이벤트"
         description="충격·급가속·수동 백업으로 동결된 사고 전후 60초 페달 기록입니다."
-        action={
-          <PendingAction id="upload-log">
-            <Upload aria-hidden="true" size={18} />
-            사고 로그 파일 업로드
-          </PendingAction>
-        }
+        action={<LogFileUploader />}
       />
 
       <Section id="events-heading" title="이벤트 세션">
         {sessions.length === 0 ? (
-          <EmptyState icon={ShieldCheck} title="기록된 급가속 또는 충격 이벤트가 없습니다.">
-            안전 운행 중입니다.
+          <EmptyState icon={ShieldCheck} title="분석된 사고 세션 로그가 없습니다.">
+            단말에서 추출된 .pel 파일을 등록해 주세요.
           </EmptyState>
         ) : (
           <ul className="m-0 grid list-none gap-2 p-0">

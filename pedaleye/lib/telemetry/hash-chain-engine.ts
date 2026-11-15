@@ -61,7 +61,10 @@ export type ChainBreakReason =
 export interface HashChainVerificationResult {
   isValid: boolean;
   brokenSequenceId?: number;
+  brokenTimestampMs?: number;
   reason?: ChainBreakReason;
+  expectedHash?: string; // 체인상 있어야 할 해시
+  actualHash?: string; // 파일에 실제로 기록된 해시
   totalRecords: number;
   initialHash: string; // 첫 패킷의 Prev_Record_Hash(제네시스)
   finalHash: string; // 마지막 패킷의 SHA-256
@@ -82,17 +85,24 @@ export async function verifyBinaryHashChain(
   const total = body / PACKET_SIZE;
   const first = decodePacketRecord(buffer, 0);
   const initialHash = toHex(first.prevHash);
-  const fail = (reason: ChainBreakReason, brokenSequenceId: number, finalHash = "") => ({
+  const fail = (
+    reason: ChainBreakReason,
+    at: { sequenceId: number; timestampMs: number },
+    detail: { expected?: string; actual?: string; finalHash?: string } = {},
+  ): HashChainVerificationResult => ({
     isValid: false,
     reason,
-    brokenSequenceId,
+    brokenSequenceId: at.sequenceId,
+    brokenTimestampMs: at.timestampMs,
+    expectedHash: detail.expected,
+    actualHash: detail.actual,
     totalRecords: total,
     initialHash,
-    finalHash,
+    finalHash: detail.finalHash ?? "",
   });
 
   if (options.expectedInitialHash && options.expectedInitialHash !== initialHash) {
-    return fail("GENESIS_MISMATCH", first.sequenceId);
+    return fail("GENESIS_MISMATCH", first, { expected: options.expectedInitialHash, actual: initialHash });
   }
 
   let prevHash: Uint8Array = first.prevHash;
@@ -101,9 +111,11 @@ export async function verifyBinaryHashChain(
   for (let index = 0; index < total; index += 1) {
     const offset = index * PACKET_SIZE;
     const record = decodePacketRecord(buffer, offset);
-    if (record.sequenceId !== first.sequenceId + index) return fail("SEQUENCE_GAP", record.sequenceId);
-    if (record.timestampMs < prevTimestamp) return fail("TIMESTAMP_REVERSED", record.sequenceId);
-    if (!equalBytes(record.prevHash, prevHash)) return fail("PREV_HASH_MISMATCH", record.sequenceId);
+    if (record.sequenceId !== first.sequenceId + index) return fail("SEQUENCE_GAP", record);
+    if (record.timestampMs < prevTimestamp) return fail("TIMESTAMP_REVERSED", record);
+    if (!equalBytes(record.prevHash, prevHash)) {
+      return fail("PREV_HASH_MISMATCH", record, { expected: toHex(prevHash), actual: toHex(record.prevHash) });
+    }
     currentHash = await sha256(buffer.subarray(offset, offset + PACKET_SIZE));
     prevHash = currentHash;
     prevTimestamp = record.timestampMs;
@@ -111,7 +123,8 @@ export async function verifyBinaryHashChain(
 
   const finalHash = toHex(currentHash);
   if (!equalBytes(buffer.subarray(body), currentHash)) {
-    return fail("FINAL_HASH_MISMATCH", first.sequenceId + total - 1, finalHash);
+    const last = decodePacketRecord(buffer, (total - 1) * PACKET_SIZE);
+    return fail("FINAL_HASH_MISMATCH", last, { expected: finalHash, actual: toHex(buffer.subarray(body)), finalHash });
   }
   return { isValid: true, totalRecords: total, initialHash, finalHash };
 }
