@@ -1,10 +1,11 @@
-import { Car, CheckCircle2, Cpu, Plus } from "lucide-react";
+import { AlertTriangle, Car, CheckCircle2, Cpu, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
+import { EventRecorderSimulator } from "@/components/telemetry/event-recorder-simulator";
 import { PedalLiveDashboard } from "@/components/telemetry/pedal-live-dashboard";
 import { isFactoryCalibration, listCalibrationTargets } from "@/lib/calibration/operations";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
@@ -12,6 +13,13 @@ import { allowedRolesForPath } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "대시보드 | 페달아이" };
+
+const EVENT_LABELS = { shock: "충격 감지", sudden_accel: "급가감속 감지", manual: "수동 백업", periodic: "정기 기록" } as const;
+const eventTime = new Intl.DateTimeFormat("ko-KR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: process.env.NEXT_PUBLIC_APP_TIMEZONE ?? "Asia/Seoul",
+});
 
 export default async function DashboardPage({
   searchParams,
@@ -28,6 +36,15 @@ export default async function DashboardPage({
     .select("id, plate_number, model_name, model_year")
     .order("plate_number");
   if (error) throw new Error(`차량 목록 조회 실패 (${error.code})`);
+
+  // 최근 사고 이벤트(RLS 로 볼 수 있는 범위)
+  const { data: latestEvent, error: eventError } = await supabase
+    .from("event_sessions")
+    .select("id, trigger_type, start_time, integrity_verified")
+    .order("start_time", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (eventError) throw new Error(`최근 이벤트 조회 실패 (${eventError.code})`);
 
   // 실시간 모니터링은 본인 단말이 있는 운전자에게 보여 준다
   const liveDevice =
@@ -55,6 +72,17 @@ export default async function DashboardPage({
         </p>
       ) : null}
 
+      {latestEvent ? (
+        <p className="m-0 flex flex-wrap items-center gap-2 rounded-md border border-border-strong bg-brake-bg px-4 py-3">
+          <AlertTriangle aria-hidden="true" size={20} className="text-brake" />
+          <strong>최근 사고 이벤트</strong>
+          <span>
+            {EVENT_LABELS[latestEvent.trigger_type]} · {eventTime.format(new Date(latestEvent.start_time))} · 무결성{" "}
+            {latestEvent.integrity_verified ? "검증 통과" : "검증 실패 또는 미검증"}
+          </span>
+        </p>
+      ) : null}
+
       {user.role === "driver" ? (
         liveDevice ? (
           <PedalLiveDashboard
@@ -77,6 +105,8 @@ export default async function DashboardPage({
           </Section>
         )
       ) : null}
+
+      {liveDevice ? <EventRecorderSimulator deviceId={liveDevice.deviceId} /> : null}
 
       <Section id="vehicles-heading" title="조회 가능한 차량">
         {vehicles.length === 0 ? (

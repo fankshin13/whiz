@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "사고 이벤트 | 페달아이" };
 
 const TRIGGER_LABELS = {
   shock: "충격 감지",
-  sudden_accel: "급가속 감지",
+  sudden_accel: "급가감속 감지",
   manual: "수동 백업",
   periodic: "정기 기록",
 } as const;
@@ -67,7 +67,7 @@ export default async function EventsPage() {
                   </span>
                   <span className="text-text-muted">
                     레코드 {session.record_count.toLocaleString("ko-KR")}개 · 무결성{" "}
-                    {session.integrity_verified ? "검증 완료" : "검증 전"}
+                    {session.integrity_verified ? "검증 통과" : "검증 실패 또는 미검증"}
                   </span>
                 </Link>
               </li>
