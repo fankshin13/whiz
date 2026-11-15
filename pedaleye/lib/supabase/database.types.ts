@@ -63,6 +63,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"invitations": {
+                  Row: {
+                    "accepted_user_id": string | null,"created_at": string,"created_by": string,"email": string,"expires_at": string,"id": string,"invitee_name": string,"org_id": string,"role": Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at": string,"used_at": string | null,"vehicle_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by": string,"email": string,"expires_at": string,"id"?: string,"invitee_name": string,"org_id": string,"role"?: Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                  }
+                  Update: {
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invitee_name"?: string,"org_id"?: string,"role"?: Database["public"]['Enums']["user_role"],"token_hash"?: string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invitations_accepted_user_id_fkey"
+      columns: ["accepted_user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invitations_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invitations_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invitations_vehicle_id_fkey"
+      columns: ["vehicle_id"]
+isOneToOne: false
+      referencedRelation: "vehicles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"organizations": {
                   Row: {
                     "created_at": string,"id": string,"name": string,"type": Database["public"]['Enums']["organization_type"],"updated_at": string
@@ -129,7 +167,9 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "accept_invitation":
+{ Args: { "p_token_hash": string,"p_user_id": string }; Returns: Database["public"]['Enums']["user_role"]
+                           }
           }
           Enums: {
             "organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"

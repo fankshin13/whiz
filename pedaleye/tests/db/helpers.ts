@@ -13,6 +13,7 @@ export const VEHICLE = {
   driverA: "30000000-0000-0000-0000-000000000001",
   driverB: "30000000-0000-0000-0000-000000000002",
   driverC: "30000000-0000-0000-0000-000000000003",
+  unassigned: "30000000-0000-0000-0000-000000000004",
 } as const;
 
 export const USER = {
@@ -29,6 +30,13 @@ function env(name: string): string {
 
 export function anonClient(): SupabaseClient<Database> {
   return createClient<Database>(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/** service_role 클라이언트(로컬 테스트 전용: 만료 시각 조작·정리용) */
+export function adminClient(): SupabaseClient<Database> {
+  return createClient<Database>(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

@@ -59,7 +59,7 @@ describe("인증", () => {
 
 describe("익명 사용자", () => {
   it("모든 테이블 접근이 거부된다", async () => {
-    for (const table of ["organizations", "users", "vehicles", "devices", "event_sessions"] as const) {
+    for (const table of ["organizations", "users", "vehicles", "devices", "event_sessions", "invitations"] as const) {
       const { error } = await anonClient().from(table).select("id");
       expect(error?.code, table).toBe("42501");
     }
@@ -77,7 +77,7 @@ describe("역할별 조회 격리 (RLS)", () => {
   });
 
   it("org_admin 은 소속 조직 차량·단말(+미장착 재고)만 본다", async () => {
-    expect(await ids(c("hwaseongAdmin"), "vehicles")).toEqual([VEHICLE.driverA, VEHICLE.driverB]);
+    expect(await ids(c("hwaseongAdmin"), "vehicles")).toEqual([VEHICLE.driverA, VEHICLE.driverB, VEHICLE.unassigned]);
     expect(await ids(c("hwaseongAdmin"), "devices")).toEqual([
       "40000000-0000-0000-0000-000000000001",
       "40000000-0000-0000-0000-000000000002",
@@ -95,7 +95,7 @@ describe("역할별 조회 격리 (RLS)", () => {
 
   it("super_admin 은 모든 조직·차량·단말을 본다", async () => {
     expect(await ids(c("superAdmin"), "organizations")).toEqual([ORG.hwaseong, ORG.seoul]);
-    expect(await ids(c("superAdmin"), "vehicles")).toEqual([VEHICLE.driverA, VEHICLE.driverB, VEHICLE.driverC]);
+    expect(await ids(c("superAdmin"), "vehicles")).toEqual([VEHICLE.driverA, VEHICLE.driverB, VEHICLE.driverC, VEHICLE.unassigned]);
     expect((await ids(c("superAdmin"), "devices")).length).toBe(4);
   });
 });
