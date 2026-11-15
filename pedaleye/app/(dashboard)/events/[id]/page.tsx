@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { forbidden } from "next/navigation";
@@ -7,6 +7,7 @@ import { toChartPoints } from "@/components/forensics/chart-point";
 import { ForensicChart } from "@/components/forensics/forensic-chart";
 import { IntegrityBadge, TamperDetail, formatSeoulTime, shortHash } from "@/components/forensics/integrity-badge";
 import { PacketGrid } from "@/components/forensics/packet-grid";
+import { ReportLink } from "@/components/forensics/report-link";
 import { ReverifyButton } from "@/components/forensics/reverify-button";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
@@ -52,10 +53,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         action={
           <div className="flex flex-wrap items-start gap-2">
             <ReverifyButton sessionId={data.sessionId} />
-            <Link href={`/events/${data.sessionId}/report`} className="btn">
-              <FileText aria-hidden="true" size={18} />
-              검증 보고서 인쇄/다운로드
-            </Link>
+            <ReportLink sessionId={data.sessionId} tampered={!verification.isValid} />
           </div>
         }
       />

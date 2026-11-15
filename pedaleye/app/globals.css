@@ -166,3 +166,21 @@ dialog.drawer {
 dialog.drawer::backdrop {
   background: rgb(17 24 39 / 0.5);
 }
+
+/* 법적 증거 보고서 A4 인쇄 규격 */
+@page {
+  size: A4 portrait;
+  margin: 15mm 12mm;
+}
+@media print {
+  html,
+  body {
+    background: #ffffff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .report-page {
+    min-height: calc(297mm - 30mm);
+    break-inside: avoid;
+  }
+}
