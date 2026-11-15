@@ -1,4 +1,4 @@
-import { Car, Plus } from "lucide-react";
+import { Car, CheckCircle2, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -11,8 +11,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "대시보드 | 페달아이" };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ calibrated?: string }>;
+}) {
   const user = await requireUserForPath("/dashboard");
+  const { calibrated } = await searchParams;
   const canManageVehicles = allowedRolesForPath("/vehicles")?.includes(user.role) ?? false;
 
   const supabase = await createClient();
@@ -36,6 +41,13 @@ export default async function DashboardPage() {
           ) : null
         }
       />
+
+      {calibrated === "1" ? (
+        <p role="status" className="m-0 flex items-center gap-2 rounded-md border border-border-strong bg-accel-bg px-4 py-3 font-semibold">
+          <CheckCircle2 aria-hidden="true" size={20} className="text-accel" />
+          페달 영점 및 가동 범위 보정이 정상 저장되었습니다.
+        </p>
+      ) : null}
 
       <Section id="vehicles-heading" title="조회 가능한 차량">
         {vehicles.length === 0 ? (

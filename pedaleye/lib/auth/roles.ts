@@ -15,7 +15,7 @@ const ROUTE_ACCESS: ReadonlyArray<{ pattern: RegExp; roles: readonly UserRole[] 
   { pattern: /^\/vehicles\/?$/, roles: ["super_admin", "org_admin"] },
   { pattern: /^\/vehicles\/[^/]+\/?$/, roles: ["super_admin", "org_admin", "driver"] },
   { pattern: /^\/events(\/|$)/, roles: ["super_admin", "org_admin", "investigator"] },
-  { pattern: /^\/devices\/calibrate(\/|$)/, roles: ["org_admin", "driver"] },
+  { pattern: /^\/devices\/calibrate(\/|$)/, roles: ["super_admin", "org_admin", "driver"] },
   { pattern: /^\/admin(\/|$)/, roles: ["super_admin"] },
 ];
 

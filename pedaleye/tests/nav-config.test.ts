@@ -17,7 +17,7 @@ describe("네비게이션 설정", () => {
 
   it("역할별로 접근 가능한 메뉴만 보인다", () => {
     const titles = (role: Parameters<typeof navItemsForRole>[0]) => navItemsForRole(role).map((i) => i.href);
-    expect(titles("super_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/admin/organizations"]);
+    expect(titles("super_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices/calibrate", "/admin/organizations"]);
     expect(titles("org_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices/calibrate"]);
     expect(titles("driver")).toEqual(["/dashboard", "/devices/calibrate"]);
     expect(titles("investigator")).toEqual(["/events"]);
