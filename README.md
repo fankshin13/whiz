@@ -1,2 +1,2 @@
-# whiz
-by frank shin at whizsecurity
+# HMS
+by frank shin at HMS
