@@ -47,3 +47,38 @@ pnpm dev
 | `lib/calibration/operations.ts` | 권한 확인 후 `devices` 보정값 저장 | Supabase 로 같은 UPDATE(RLS 가 운전자·관리자 범위 강제) |
 
 단위 테스트(`tests/displacement-engine.test.ts`, `tests/calibration-wizard.test.ts`)의 입력·기대값을 앱 테스트에도 그대로 쓰면 같은 동작을 보장할 수 있습니다.
+
+## 운영 배포 (Vercel + Supabase)
+
+### 1. 운영 Supabase
+1. supabase.com 에서 새 프로젝트를 만든다(리전 Seoul `ap-northeast-2` 권장).
+2. 마이그레이션 적용 — 둘 중 하나:
+   - CLI: `pnpm exec supabase link --project-ref <ref>` 후 `pnpm exec supabase db push` (시드는 넣지 않는다)
+   - 대시보드 SQL Editor: `supabase/migrations/` 의 7개 파일을 번호 순서대로 실행
+3. Authentication 설정
+   - URL Configuration → Site URL = 서비스 주소(`APP_BASE_URL`)
+   - Email → 최소 비밀번호 길이 8
+   - 일반 가입 끄기 권장(Allow new users to sign up 해제). 운전자는 초대 링크로만 가입하며, 초대 수락은 서버가 관리자 API로 계정을 만들므로 영향이 없다.
+4. 점검: SQL Editor 에서 `supabase/audit/production-audit.sql` 실행 → 모든 행의 `ok` 가 `true` 인지 확인
+5. 첫 슈퍼 관리자: Authentication → Users → Add user 로 계정을 만든 뒤 SQL Editor 에서
+   `update public.users set role = 'super_admin' where email = '<이메일>';`
+   조직은 `insert into public.organizations (name, type) values ('<조직명>', 'b2g');` 로 만든다.
+
+### 2. Vercel
+1. 새 프로젝트, Root Directory = `pedaleye`, Framework = Next.js (`vercel.json` 이 서울 리전 `icn1`·pnpm 을 지정)
+2. Environment Variables(Production) — 값은 Supabase 대시보드 Project Settings → API 에서 복사
+
+   | 이름 | 값 | 비고 |
+   | --- | --- | --- |
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | 공개 |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon(publishable) 키 | 공개 |
+   | `SUPABASE_SERVICE_ROLE_KEY` | service_role(secret) 키 | **Sensitive 로 등록**, 절대 `NEXT_PUBLIC_` 접두사 금지 |
+   | `NEXT_PUBLIC_APP_TIMEZONE` | `Asia/Seoul` | |
+   | `APP_BASE_URL` | `https://<프로젝트>.vercel.app` | 초대 링크·보고서 QR 주소 |
+   | `NTP_SERVER_HOST` | `time.google.com` | |
+   | `EVENT_BUFFER_WINDOW_SEC` | `30` | |
+
+   하나라도 빠지거나 형식이 틀리면 Vercel 빌드가 `[CRITICAL]` 오류로 실패한다(설정이 틀린 배포 차단).
+3. 배포 후 확인
+   - `https://<주소>/api/health` → HTTP 200, `{"status":"healthy","database":"connected","timezone":"Asia/Seoul"}`
+   - 첫 슈퍼 관리자로 로그인 → 조직·차량 등록 → 운전자 초대 링크 발급

@@ -1,0 +1,29 @@
+import { z } from "zod";
+
+/**
+ * 서버 환경 변수 규칙. server-only 를 붙이지 않은 이유: next.config.ts(빌드 시점)에서도 같은 규칙으로
+ * 검사해 설정이 틀린 운영 배포를 막기 위함. 시크릿 값 자체는 이 파일에서 읽어 내보내지 않는다.
+ */
+export const serverEnvSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  NEXT_PUBLIC_APP_TIMEZONE: z.literal("Asia/Seoul"),
+  APP_BASE_URL: z.url().transform((value) => value.replace(/\/+$/, "")),
+  NTP_SERVER_HOST: z.string().min(1).default("time.google.com"),
+  EVENT_BUFFER_WINDOW_SEC: z.coerce.number().int().positive().default(30),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
+});
+
+export type ServerEnv = z.infer<typeof serverEnvSchema>;
+
+/** 값이 아닌 변수 이름과 문제만 담아 오류를 던진다(시크릿이 로그에 남지 않게). */
+export function validateServerEnv(source: Record<string, string | undefined> = process.env): ServerEnv {
+  const result = serverEnvSchema.safeParse(source);
+  if (!result.success) {
+    const details = result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join(", ");
+    throw new Error(`[CRITICAL] 잘못되었거나 누락된 서버 환경 변수: ${details}`);
+  }
+  return result.data;
+}
+
