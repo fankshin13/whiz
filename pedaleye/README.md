@@ -48,6 +48,21 @@ pnpm dev
 
 단위 테스트(`tests/displacement-engine.test.ts`, `tests/calibration-wizard.test.ts`)의 입력·기대값을 앱 테스트에도 그대로 쓰면 같은 동작을 보장할 수 있습니다.
 
+## 모바일 앱(`../pedaleye-app`)용 API
+
+앱에는 서버 비밀 키가 없으므로 권한이 필요한 일은 이 웹 서버가 합니다. 세 API 모두 IP당 분당 요청 수를 제한합니다.
+
+| 요청 | 인증 | 하는 일 |
+| --- | --- | --- |
+| `POST /api/invitations/verify` | 없음(1회용 토큰) | 초대 확인 → 조직·차량·이메일 |
+| `POST /api/invitations/accept` | 없음(1회용 토큰) | 운전자 계정 생성·차량 배정(웹 초대 수락과 같은 로직) |
+| `POST /api/events/upload` | `Authorization: Bearer <Supabase 액세스 토큰>` | 사고 세션(.pel) 업로드. 웹 업로드와 같은 `uploadEventSession`(본인 배정 차량 단말만 → 서버 해시 체인 전수 검증 → service_role 저장, 같은 세션은 중복 생성 안 함) |
+
+## 운전자의 사고 기록 열람
+
+운전자는 `/events`(목록), `/events/[id]`(무결성 검증 결과), `/events/[id]/report`(PDF 보고서)를 **지금 본인에게 배정된 차량의 세션만** 볼 수 있습니다.
+DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForensics`(배정 운전자 확인)가 이중으로 막습니다. 차량 배정이 바뀌면 이전 차량 기록은 더 이상 보이지 않습니다.
+
 ## 운영 배포 (Vercel + Supabase)
 
 ### 1. 운영 Supabase

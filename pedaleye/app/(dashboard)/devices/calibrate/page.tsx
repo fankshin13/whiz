@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CalibrationWizard } from "@/components/calibration/calibration-wizard";
+import { CurrentCalibration } from "@/components/calibration/current-calibration";
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
@@ -49,7 +50,12 @@ export default async function CalibratePage({
           </EmptyState>
         </Section>
       ) : selected ? (
-        <CalibrationWizard key={selected.deviceId} device={selected} />
+        <>
+          <Section id="current-calibration-heading" title="현재 저장된 보정값">
+            <CurrentCalibration device={selected} />
+          </Section>
+          <CalibrationWizard key={selected.deviceId} device={selected} />
+        </>
       ) : (
         <Section id="select-device-heading" title="보정할 단말 선택">
           <ul className="m-0 grid list-none gap-2 p-0">

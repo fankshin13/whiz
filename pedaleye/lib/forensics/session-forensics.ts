@@ -9,7 +9,7 @@ import { decodePacketRecord } from "@/lib/telemetry/packet-codec";
 import type { SessionForensicData } from "@/types/forensics";
 
 type Client = SupabaseClient<Database>;
-type Operator = Pick<CurrentUser, "role" | "orgId">;
+type Operator = Pick<CurrentUser, "role" | "orgId"> & { id?: string };
 
 export const SESSION_NOT_AVAILABLE = "사고 세션 데이터를 찾을 수 없거나 열람 권한이 없습니다.";
 
@@ -19,7 +19,8 @@ export type SessionForensicsResult =
 
 /**
  * 저장된 세션의 원본 로그를 받아 다시 전수 검증한다.
- * 권한: super_admin 전체, org_admin·investigator 는 소속 조직 차량 세션만(RLS 로 한 번 더 제한).
+ * 권한: super_admin 전체, org_admin·investigator 는 소속 조직 차량 세션만,
+ * driver 는 지금 본인에게 배정된 차량의 세션만(RLS 로 한 번 더 제한).
  * syncWith 를 주면 검증 결과가 저장값과 다를 때 service_role 로 integrity_verified 를 맞춘다.
  */
 export async function loadSessionForensics(
@@ -28,7 +29,7 @@ export async function loadSessionForensics(
   sessionId: string,
   syncWith?: Client,
 ): Promise<SessionForensicsResult> {
-  if (!["super_admin", "org_admin", "investigator"].includes(user.role)) {
+  if (!["super_admin", "org_admin", "investigator", "driver"].includes(user.role)) {
     return { success: false, status: 403, error: SESSION_NOT_AVAILABLE };
   }
   if (!/^[0-9a-f-]{36}$/i.test(sessionId)) return { success: false, status: 404, error: SESSION_NOT_AVAILABLE };
@@ -36,7 +37,7 @@ export async function loadSessionForensics(
   const { data: session, error } = await userClient
     .from("event_sessions")
     .select(
-      "id, device_id, trigger_type, start_time, end_time, integrity_verified, raw_log_storage_path, device:devices!inner(serial_number, vehicle:vehicles!inner(plate_number, org_id))",
+      "id, device_id, trigger_type, start_time, end_time, integrity_verified, raw_log_storage_path, device:devices!inner(serial_number, vehicle:vehicles!inner(plate_number, org_id, assigned_user_id))",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -44,7 +45,13 @@ export async function loadSessionForensics(
     console.error("loadSessionForensics query failed", { code: error.code });
     return { success: false, status: 500, error: "세션 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." };
   }
-  if (!session || (user.role !== "super_admin" && session.device.vehicle.org_id !== user.orgId)) {
+  const inScope =
+    !!session &&
+    (user.role === "super_admin" ||
+      (user.role === "driver"
+        ? !!user.id && session.device.vehicle.assigned_user_id === user.id
+        : session.device.vehicle.org_id === user.orgId));
+  if (!session || !inScope) {
     return { success: false, status: 403, error: SESSION_NOT_AVAILABLE };
   }
   if (!session.raw_log_storage_path) {

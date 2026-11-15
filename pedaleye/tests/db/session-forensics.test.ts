@@ -65,15 +65,24 @@ describe("세션 포렌식 조회·재검증", () => {
     expect(result.data.packets[595]).toMatchObject({ bothPedalFlag: true, brakeDistanceMm: 130 });
   });
 
-  it("super_admin 은 조회 가능, 타 조직 관리자·운전자는 403", async () => {
+  it("super_admin·배정 운전자는 조회 가능, 타 조직 관리자·다른 운전자는 403", async () => {
     const superClient = await signedInClient("super@pedaleye.test");
     expect((await loadSessionForensics(superClient, SUPER, sessionId)).success).toBe(true);
 
     const seoul = await signedInClient("admin.seoul@pedaleye.test");
     expect(await loadSessionForensics(seoul, SEOUL_ADMIN, sessionId)).toMatchObject({ success: false, status: 403 });
 
+    // 운전자 A 는 본인 배정 차량(12가 3456) 세션을 무결성 검증 결과와 함께 본다
     const driver = await signedInClient("driver.a@pedaleye.test");
-    expect(await loadSessionForensics(driver, DRIVER_A, sessionId)).toMatchObject({ success: false, status: 403 });
+    const own = await loadSessionForensics(driver, DRIVER_A, sessionId);
+    expect(own.success && own.data.verification.isValid).toBe(true);
+
+    // 같은 조직이어도 다른 운전자(B)는 볼 수 없다(RLS 로 행 자체가 안 보임)
+    const driverB = await signedInClient("driver.b@pedaleye.test");
+    const DRIVER_B = { id: "20000000-0000-0000-0000-000000000004", role: "driver", orgId: ORG.hwaseong } as const;
+    expect(await loadSessionForensics(driverB, DRIVER_B, sessionId)).toMatchObject({ success: false, status: 403 });
+    // id 없이 driver 역할만 넘기면(호출 실수) 거부
+    expect(await loadSessionForensics(driver, { role: "driver", orgId: ORG.hwaseong }, sessionId)).toMatchObject({ success: false, status: 403 });
   });
 
   it("저장된 원본이 바뀌면 재검증이 변조를 잡고 integrity_verified 를 false 로 맞춘다", async () => {

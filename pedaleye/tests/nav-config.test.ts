@@ -19,7 +19,7 @@ describe("네비게이션 설정", () => {
     const titles = (role: Parameters<typeof navItemsForRole>[0]) => navItemsForRole(role).map((i) => i.href);
     expect(titles("super_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices/calibrate", "/admin/organizations"]);
     expect(titles("org_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices/calibrate"]);
-    expect(titles("driver")).toEqual(["/dashboard", "/devices/calibrate"]);
+    expect(titles("driver")).toEqual(["/dashboard", "/events", "/devices/calibrate"]);
     expect(titles("investigator")).toEqual(["/events"]);
   });
 
