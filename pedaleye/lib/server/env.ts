@@ -1,0 +1,18 @@
+import "server-only";
+
+import { validateServerEnv } from "@/lib/server/env-schema";
+
+/**
+ * 서버 전용 설정·시크릿 접근 모듈(클라이언트 번들에 포함되면 빌드가 실패한다).
+ * 서버 기동 시 instrumentation.ts, Vercel 빌드 시 next.config.ts 가 같은 규칙으로 검사한다.
+ */
+export { validateServerEnv, type ServerEnv } from "@/lib/server/env-schema";
+
+export function getServiceRoleKey(): string {
+  return validateServerEnv().SUPABASE_SERVICE_ROLE_KEY;
+}
+
+/** 초대 링크·보고서 QR 등 외부로 전달하는 URL 의 기준 주소. 요청 Host 헤더를 믿지 않기 위해 설정값을 쓴다. */
+export function getAppBaseUrl(): string {
+  return validateServerEnv().APP_BASE_URL;
+}

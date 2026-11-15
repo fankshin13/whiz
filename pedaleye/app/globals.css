@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+/*
+ * 페달아이 디자인 토큰 — 마스터 스펙 'UX 원칙' 값.
+ * Tailwind 유틸리티(bg-accel, text-text-muted, rounded-lg, p-4 …)와 CSS 변수로 함께 쓴다.
+ */
+@theme {
+  --color-*: initial;
+  --color-accel: #0066ff;
+  --color-accel-bg: #f0f6ff;
+  --color-brake: #ff3b30;
+  --color-brake-bg: #fff2f2;
+  --color-dual-warning: #ff9500;
+  --color-primary-action: #1a1d20;
+  --color-primary-action-fg: #ffffff;
+  --color-bg-base: #ffffff;
+  --color-bg-panel: #f8f9fa;
+  --color-border: #e5e7eb;
+  --color-border-strong: #6b7280; /* 입력란 테두리: 비텍스트 대비 3:1 확보용 */
+  --color-text-main: #111827;
+  --color-text-muted: #4b5563;
+  /* 상태(검증 통과·실패) 전용. 데이터 계열 색과 섞어 쓰지 않는다. 포렌식 검증 배지용으로 추가 */
+  --color-good: #15803d;
+  --color-good-bg: #f0fdf4;
+  --color-critical: #b91c1c;
+  --color-critical-bg: #fef2f2;
+  /* 범주형 데이터 계열(관제 이벤트 유형). 고정 순서로만 쓰고 의미 색(가속·제동)과 섞지 않는다. 색각 검증 통과 */
+  --color-series-1: #2a78d6;
+  --color-series-2: #eb6834;
+  --color-series-3: #1baf7a;
+  --color-series-4: #eda100;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: var(--font-pretendard), Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --text-metric: 32px;
+  --text-metric--line-height: 1.25;
+  --text-h1: 24px;
+  --text-h1--line-height: 1.35;
+  --text-h2: 18px;
+  --text-h2--line-height: 1.4;
+  --text-body: 14px;
+  --text-body--line-height: 1.6;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.5;
+
+  --spacing: 4px; /* 4px 그리드: p-1=4, p-2=8, p-3=12, p-4=16, p-6=24, p-8=32 */
+
+  --radius-md: 8px; /* 컴포넌트 기본 */
+  --radius-lg: 12px; /* 카드·모달 */
+
+
+  --size-touch: 48px; /* 운전석 환경 최소 터치 영역(WCAG 44px 이상) */
+  --size-sidebar: 256px;
+  --size-header: 56px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg-base);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-accel);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: --spacing(2);
+    min-height: var(--size-touch);
+    min-width: var(--size-touch);
+    padding-inline: --spacing(4);
+    border: 1px solid var(--color-primary-action);
+    border-radius: var(--radius-md);
+    background: var(--color-primary-action);
+    color: var(--color-primary-action-fg);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: var(--color-bg-base);
+    color: var(--color-primary-action);
+  }
+  .card {
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: --spacing(6);
+  }
+  .input {
+    width: 100%;
+    min-height: var(--size-touch);
+    padding-inline: --spacing(3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-base);
+    color: var(--color-text-main);
+    font: inherit;
+  }
+  .alert {
+    border: 1px solid var(--color-brake);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    background: var(--color-brake-bg);
+    color: var(--color-text-main);
+    padding: --spacing(3) --spacing(4);
+  }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* 화면 점멸은 초당 3회 미만(WCAG 2.3.1 광과민성 기준). 실물 LED 는 컨트롤러가 10Hz 로 점멸한다. */
+.led-flash {
+  animation: led-flash 0.8s steps(1, end) infinite;
+}
+@keyframes led-flash {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .led-flash {
+    animation: none;
+  }
+}
+
+dialog.drawer {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(320px, 85vw);
+  background: var(--color-bg-panel);
+  color: var(--color-text-main);
+}
+dialog.drawer::backdrop {
+  background: rgb(17 24 39 / 0.5);
+}
+
+/* 법적 증거 보고서 A4 인쇄 규격 */
+@page {
+  size: A4 portrait;
+  margin: 15mm 12mm;
+}
+@media print {
+  html,
+  body {
+    background: #ffffff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .report-page {
+    min-height: calc(297mm - 30mm);
+    break-inside: avoid;
+  }
+}
