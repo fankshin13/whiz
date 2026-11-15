@@ -6,13 +6,14 @@ import '../../features/auth/presentation/invite_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/not_driver_screen.dart';
 import '../../features/auth/presentation/session_screens.dart';
-import '../../features/calibration/presentation/calibration_placeholder_screen.dart';
+import '../../features/calibration/presentation/pedal_calibration_screen.dart';
+import '../../features/gauge/presentation/pedal_gauge_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/records/presentation/records_placeholder_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 
 const _signedOutPaths = {'/login', '/invite'};
-const _driverPaths = {'/home', '/calibration', '/records'};
+const _driverPaths = {'/home', '/calibrate', '/gauge', '/records'};
 
 /// 딥링크 pedaleye://invite?token=… 는 호스트가 'invite' 라 경로로 바꿔 준다.
 /// 웹 초대 주소(…/auth/invite?token=…)를 앱 링크로 받는 경우도 같은 화면으로 보낸다.
@@ -59,6 +60,8 @@ GoRouter createRouter(SessionController session) {
       ),
       GoRoute(path: '/not-driver', builder: (context, state) => const NotDriverScreen()),
       GoRoute(path: '/connect-error', builder: (context, state) => const RoleCheckFailedScreen()),
+      // 주행 중 화면: 탭 바 없이 전체 화면
+      GoRoute(path: '/gauge', builder: (context, state) => const PedalGaugeScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
@@ -66,7 +69,7 @@ GoRouter createRouter(SessionController session) {
             routes: [GoRoute(path: '/home', builder: (context, state) => const HomeScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/calibration', builder: (context, state) => const CalibrationPlaceholderScreen())],
+            routes: [GoRoute(path: '/calibrate', builder: (context, state) => const PedalCalibrationScreen())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: '/records', builder: (context, state) => const RecordsPlaceholderScreen())],

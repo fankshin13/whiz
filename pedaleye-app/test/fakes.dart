@@ -6,10 +6,16 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:pedaleye_app/app.dart';
+import 'package:pedaleye_app/core/calibration/calibration_wizard_state_machine.dart';
+import 'package:pedaleye_app/core/feedback/warning_feedback.dart';
+import 'package:pedaleye_app/core/sensor/mock_pedal_sensor_source.dart';
+import 'package:pedaleye_app/core/telemetry/telemetry_controller.dart';
 import 'package:pedaleye_app/features/auth/application/session_controller.dart';
 import 'package:pedaleye_app/features/auth/data/auth_repository.dart';
 import 'package:pedaleye_app/features/auth/data/invite_repository.dart';
 import 'package:pedaleye_app/features/auth/domain/user_role.dart';
+import 'package:pedaleye_app/features/calibration/data/device_repository.dart';
+import 'package:pedaleye_app/features/calibration/domain/driver_device.dart';
 import 'package:pedaleye_app/features/home/data/driver_home_repository.dart';
 import 'package:pedaleye_app/features/home/domain/driver_home_data.dart';
 
@@ -102,6 +108,9 @@ Future<SessionController> pumpApp(
   required FakeAuthRepository auth,
   FakeHomeRepository? home,
   InviteRepository? invites,
+  FakeDeviceRepository? devices,
+  FakeSensors? sensors,
+  FakeWarningFeedback? feedback,
 }) async {
   final session = SessionController(auth);
   await session.start();
@@ -111,6 +120,9 @@ Future<SessionController> pumpApp(
       auth: auth,
       invites: invites ?? fakeInvites((_, _) => (500, <String, Object?>{})),
       home: home ?? FakeHomeRepository(driverHome),
+      devices: devices ?? FakeDeviceRepository(calibratedDevice),
+      sensorFactory: (sensors ?? FakeSensors()).create,
+      warningFeedback: feedback ?? FakeWarningFeedback(),
       webConsoleUrl: Uri.parse('https://pedaleye.vercel.app'),
     ),
   );
@@ -124,3 +136,78 @@ void useNarrowPhone(WidgetTester tester) {
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 }
+
+/// 모의 센서를 잡음 없이 만들고, 테스트가 조작할 수 있게 마지막 것을 기억한다
+class FakeSensors {
+  final created = <MockPedalSensorSource>[];
+  MockPedalSensorSource get last => created.last;
+
+  MockPedalSensorSource create() {
+    final source = MockPedalSensorSource(noise: 0, clock: () => 0);
+    created.add(source);
+    return source;
+  }
+}
+
+class FakeWarningFeedback implements WarningFeedback {
+  int pulses = 0;
+
+  @override
+  Future<void> dualPressPulse() async => pulses += 1;
+}
+
+class FakeDeviceRepository implements DeviceRepository {
+  FakeDeviceRepository(this.device);
+  DriverDevice? device;
+  bool loadFails = false;
+  CalibrationSaveFailure? nextSaveFailure;
+  final saved = <CalibrationPayload>[];
+
+  @override
+  Future<DriverDevice?> loadMyDevice(String userId) async {
+    if (loadFails) throw const DeviceLoadException();
+    return device;
+  }
+
+  @override
+  Future<void> saveCalibration(CalibrationPayload payload) async {
+    final failure = nextSaveFailure;
+    if (failure != null) {
+      nextSaveFailure = null;
+      throw CalibrationSaveException(failure);
+    }
+    saved.add(payload);
+    final d = device!;
+    device = DriverDevice(
+      deviceId: d.deviceId,
+      serialNumber: d.serialNumber,
+      plateNumber: d.plateNumber,
+      calibration: PedalCalibration(
+        accelCalibMin: payload.accelCalibMin,
+        accelCalibMax: payload.accelCalibMax,
+        brakeCalibMin: payload.brakeCalibMin,
+        brakeCalibMax: payload.brakeCalibMax,
+      ),
+    );
+  }
+}
+
+/// 웹 시뮬레이터와 같은 형상으로 보정된 단말
+const calibratedDevice = DriverDevice(
+  deviceId: '40000000-0000-0000-0000-000000000001',
+  serialNumber: 'PE-2026-000001',
+  plateNumber: '12가 3456',
+  calibration: PedalCalibration(
+    accelCalibMin: MockPedalGeometry.accelFull,
+    accelCalibMax: MockPedalGeometry.accelIdle,
+    brakeCalibMin: MockPedalGeometry.brakeFull,
+    brakeCalibMax: MockPedalGeometry.brakeIdle,
+  ),
+);
+
+const factoryDevice = DriverDevice(
+  deviceId: '40000000-0000-0000-0000-000000000001',
+  serialNumber: 'PE-2026-000001',
+  plateNumber: '12가 3456',
+  calibration: PedalCalibration(accelCalibMin: 0, accelCalibMax: 4095, brakeCalibMin: 0, brakeCalibMax: 4095),
+);

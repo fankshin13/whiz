@@ -5,9 +5,16 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pedaleye_app/core/sensor/mock_pedal_sensor_source.dart';
 import 'package:pedaleye_app/features/home/domain/driver_home_data.dart';
 
 import '../test/fakes.dart';
+
+Future<void> run(WidgetTester tester, int ms) async {
+  for (var i = 0; i < ms ~/ 50; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
 
 Future<void> loadFonts() async {
   final pretendard = FontLoader('Pretendard');
@@ -28,6 +35,7 @@ void main() {
 
   for (final width in [320.0, 412.0]) {
     Future<void> shot(WidgetTester tester, String name) async {
+      await tester.pump();
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('../build/screenshots/${width.toInt()}-$name.png'));
     }
 
@@ -102,6 +110,67 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, '가입 및 로그인 완료'));
       await tester.pumpAndSettle();
       await shot(tester, '08-invite-unusable');
+    });
+
+    testWidgets('$width 캘리브레이션', (tester) async {
+      size(tester);
+      final sensors = FakeSensors();
+      await pumpApp(
+        tester,
+        auth: fakeAuth(signedInAs: driverId),
+        sensors: sensors,
+        devices: FakeDeviceRepository(factoryDevice),
+      );
+      await tester.tap(find.text('페달 보정').last);
+      await run(tester, 300);
+      await shot(tester, '09-calibrate-step1');
+      Future<void> cap() async {
+        final b = find.byWidgetPredicate((w) => w is FilledButton).first;
+        await tester.ensureVisible(b);
+        await tester.tap(b);
+        await run(tester, 3300);
+      }
+
+      await cap();
+      sensors.last.setPress(accel: 0.05);
+      await cap();
+      await tester.scrollUntilVisible(find.textContaining('2단계:'), -100);
+      await run(tester, 100);
+      await shot(tester, '10-calibrate-shallow');
+      sensors.last.setPress(accel: 1);
+      await cap();
+      sensors.last.setPress(accel: 0);
+      await cap();
+      sensors.last.setPress(brake: 1);
+      await cap();
+      sensors.last.setPress(brake: 0.4, accel: 0);
+      await tester.scrollUntilVisible(find.text('보정 완료'), -100);
+      await run(tester, 200);
+      await shot(tester, '11-calibrate-complete');
+    });
+
+    testWidgets('$width 게이지', (tester) async {
+      size(tester);
+      final sensors = FakeSensors();
+      await pumpApp(
+        tester,
+        auth: fakeAuth(signedInAs: driverId),
+        sensors: sensors,
+      );
+      await tester.tap(find.text('실시간 페달 게이지'));
+      await run(tester, 300);
+      sensors.last.setPress(accel: 0.65);
+      await run(tester, 200);
+      await shot(tester, 'zz-warmup'); // 첫 캡처는 이전 합성 결과가 찍히는 경우가 있어 한 번 버린다
+      await run(tester, 100);
+      await shot(tester, '12-gauge-accel');
+      sensors.last.setPress(accel: 0.3, brake: 0.4);
+      await run(tester, 450);
+      await shot(tester, '13-gauge-dual');
+      sensors.last.setPress(accel: 0, brake: 0);
+      sensors.last.setScenario(MockPedalScenario.sensorTimeout);
+      await run(tester, 3300);
+      await shot(tester, '14-gauge-lost');
     });
   }
 }

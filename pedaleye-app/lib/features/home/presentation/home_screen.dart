@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../app_scope.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/status_message.dart';
@@ -183,6 +185,12 @@ class _VehicleCard extends StatelessWidget {
               backgroundColor: AppColors.bgBase,
               side: const BorderSide(color: AppColors.borderStrong),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            const SizedBox(height: AppSpacing.s3),
+            FilledButton.icon(
+              onPressed: () => context.go('/gauge'),
+              icon: const Icon(Icons.speed),
+              label: const Text('실시간 페달 게이지'),
             ),
           ],
         ),

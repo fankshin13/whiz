@@ -49,3 +49,6 @@ app.*.map.json
 
 # 로컬 접속 정보(공개 키지만 환경마다 다르므로 커밋하지 않는다)
 .env
+
+# Gradle 빌드 산출물
+/android/build/

@@ -233,9 +233,9 @@ void main() {
 
   testWidgets('하단 탭 3개: 홈·페달 보정·사고 기록', (tester) async {
     await pumpApp(tester, auth: fakeAuth(signedInAs: driverId));
-    await tester.tap(find.text('페달 보정'));
+    await tester.tap(find.text('페달 보정').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining(keepAll('페달 영점')), findsOneWidget);
+    expect(find.text('1단계: 가속 페달 영점(0%)'), findsOneWidget);
     await tester.tap(find.text('사고 기록').last);
     await tester.pumpAndSettle();
     expect(find.textContaining(keepAll('사고 기록 백업')), findsOneWidget);
