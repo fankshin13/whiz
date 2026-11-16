@@ -6,5 +6,5 @@
   "regions": [
     "icn1"
   ],
-  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]"
+  "ignoreCommand": "[ \"$VERCEL_ENV\" = \"preview\" ]"
 }
