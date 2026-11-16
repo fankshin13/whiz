@@ -82,6 +82,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
 ### 2. Vercel
 1. 새 프로젝트, Root Directory = `pedaleye`, Framework = Next.js (`vercel.json` 이 서울 리전 `icn1`·pnpm 을 지정)
    - Git 연결 시 운영 브랜치 = `master`. `vercel.json` 의 `ignoreCommand` 가 운영(production)이 아닌 배포는 빌드를 건너뛰게 해 미리보기 배포를 끈다(환경 변수가 Production 에만 있으므로). 미리보기가 필요해지면 이 줄을 지우고 Preview 용 환경 변수(별도 Supabase)를 넣는다.
+   - **확인 필수**: Vercel 프로젝트 Settings → Git 의 **Production Branch 가 `master`** 여야 한다. 다르면 `master` 병합도 미리보기로 분류돼 빌드가 건너뛰어진다(GitHub 상태에 "Canceled by Ignored Build Step"). 이렇게 건너뛴 배포는 Redeploy 해도 미리보기로 남으므로, 설정을 고친 뒤 `master` 에 새 커밋을 올리거나 대시보드에서 `master` 로 새 배포를 만든다.
 2. Environment Variables(Production) — 값은 Supabase 대시보드 Project Settings → API 에서 복사
 
    | 이름 | 값 | 비고 |
