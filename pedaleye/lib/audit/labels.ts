@@ -10,6 +10,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
   VEHICLE_CREATE: "차량 등록",
   VEHICLE_UPDATE: "차량 수정",
   VEHICLE_DRIVER_UNASSIGN: "운전자 배정 해제",
+  VEHICLE_DRIVER_ASSIGN: "운전자 배정",
   VEHICLE_DELETE: "차량 삭제",
   DEVICE_CREATE: "단말 등록",
   DEVICE_MOUNT: "단말 장착",

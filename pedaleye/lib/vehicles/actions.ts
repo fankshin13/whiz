@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
-import { unassignDriver, upsertVehicle } from "@/lib/vehicles/operations";
+import { assignDriver, unassignDriver, upsertVehicle } from "@/lib/vehicles/operations";
 
 const LOGIN_REQUIRED = { ok: false, error: "로그인이 필요합니다." } as const;
 
@@ -66,4 +66,26 @@ export async function unassignDriverAction(_prev: UnassignState, formData: FormD
   revalidatePath("/vehicles");
   // 해제되면 대화상자가 들어 있던 운전자 영역이 사라지므로, 서버에서 바로 안내 화면으로 보낸다
   redirect(`/vehicles/${vehicleId}?notice=unassigned`);
+}
+
+export type AssignState = { ok: null } | { ok: false; error: string };
+
+/** 가입된 운전자를 차량에 배정. 성공하면 차량 상세로 돌아가 안내한다. */
+export async function assignDriverAction(_prev: AssignState, formData: FormData): Promise<AssignState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: LOGIN_REQUIRED.error };
+  const vehicleId = String(formData.get("vehicleId") ?? "").slice(0, 64);
+  const supabase = await createClient();
+  const result = await assignDriver(supabase, user, {
+    vehicleId,
+    userId: String(formData.get("userId") ?? "").slice(0, 64),
+    reason: String(formData.get("reason") ?? "").slice(0, 200),
+  });
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "VEHICLE_DRIVER_ASSIGN", targetType: "vehicle", targetId: vehicleId });
+    return { ok: false, error: result.error };
+  }
+  revalidatePath("/vehicles");
+  revalidatePath("/users");
+  redirect(`/vehicles/${vehicleId}?notice=assigned`);
 }

@@ -6,15 +6,17 @@ import { InviteDriverModal } from "@/components/fleet/invite-driver-modal";
 import { ReissueInvitationDialog, RevokeInvitationDialog } from "@/components/invitations/invitation-dialogs";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
-import { UnassignDriverDialog, VehicleFormDialog } from "@/components/vehicles/vehicle-dialogs";
+import { AssignDriverDialog, UnassignDriverDialog, VehicleFormDialog } from "@/components/vehicles/vehicle-dialogs";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
+import { listAssignableDrivers } from "@/lib/vehicles/operations";
 
 export const metadata: Metadata = { title: "차량 상세 | 페달아이" };
 
 const NOTICES: Record<string, string> = {
   updated: "차량 정보가 변경되었습니다.",
   unassigned: "운전자 배정을 해제했습니다. 이제 새 운전자를 초대할 수 있습니다.",
+  assigned: "운전자를 배정했습니다. 운전자 앱에서 이 차량이 보입니다.",
   invitation_revoked: "초대 링크가 정상적으로 취소되었습니다. 이제 새 운전자를 초대할 수 있습니다.",
 };
 
@@ -42,7 +44,7 @@ export default async function VehicleDetailPage({
     ? await supabase
         .from("vehicles")
         .select(
-          "id, plate_number, model_name, model_year, vin_masked, org:organizations(name), driver:users!vehicles_assigned_user_id_fkey(name, email), device:devices(id, serial_number, firmware_version, last_synced_at, auth_public_key, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max)",
+          "id, org_id, plate_number, model_name, model_year, vin_masked, org:organizations(name), driver:users!vehicles_assigned_user_id_fkey(name, email), device:devices(id, serial_number, firmware_version, last_synced_at, auth_public_key, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max)",
         )
         .eq("id", id)
         .maybeSingle()
@@ -80,6 +82,8 @@ export default async function VehicleDetailPage({
           .maybeSingle()
       ).data
     : null;
+  // 초대 대기가 없을 때만 기존 운전자 배정을 보여 준다(대기 초대가 있으면 먼저 취소)
+  const assignable = canManage && !vehicle.driver && !pendingInvite ? await listAssignableDrivers(supabase, vehicle.org_id) : [];
 
   return (
     <>
@@ -199,7 +203,12 @@ export default async function VehicleDetailPage({
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="m-0 text-text-muted">배정된 운전자가 없습니다.</p>
-            {canManage ? <InviteDriverModal vehicleId={vehicle.id} plateNumber={vehicle.plate_number} /> : null}
+            {canManage ? (
+              <div className="flex flex-wrap gap-2">
+                <AssignDriverDialog vehicleId={vehicle.id} plateNumber={vehicle.plate_number} drivers={assignable} />
+                <InviteDriverModal vehicleId={vehicle.id} plateNumber={vehicle.plate_number} />
+              </div>
+            ) : null}
           </div>
         )}
       </Section>
