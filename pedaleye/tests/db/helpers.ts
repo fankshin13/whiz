@@ -35,9 +35,10 @@ function env(name: string): string {
   return value;
 }
 
-export function anonClient(): SupabaseClient<Database> {
+export function anonClient(headers?: Record<string, string>): SupabaseClient<Database> {
   return createClient<Database>(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
+    ...(headers ? { global: { headers } } : {}),
   });
 }
 
@@ -48,8 +49,8 @@ export function adminClient(): SupabaseClient<Database> {
   });
 }
 
-export async function signedInClient(email: string): Promise<SupabaseClient<Database>> {
-  const client = anonClient();
+export async function signedInClient(email: string, headers?: Record<string, string>): Promise<SupabaseClient<Database>> {
+  const client = anonClient(headers);
   const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (error) throw new Error(`${email} 로그인 실패: ${error.message}`);
   return client;

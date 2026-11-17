@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { postLoginPath } from "@/lib/auth/roles";
-import { acceptInvitation, createInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
+import { acceptInvitation, createInvestigatorInvitation, createInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
 import { getAppBaseUrl } from "@/lib/server/env";
+import { clientIpFromHeaders } from "@/lib/server/rate-limit";
 import { createAdminClient } from "@/lib/server/supabase-admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,8 +33,9 @@ export async function createInvitationAction(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "로그인이 필요합니다. 다시 로그인해 주세요.", values };
 
+  const supabase = await createClient();
   const result = await createInvitation(
-    await createClient(),
+    supabase,
     user,
     {
       vehicleId: formData.get("vehicleId"),
@@ -42,7 +46,10 @@ export async function createInvitationAction(
     getAppBaseUrl(),
   );
   // 목록 갱신은 관리자가 링크를 복사하고 창을 닫을 때 클라이언트에서 한다(즉시 갱신하면 모달이 사라짐).
-  if (!result.ok) return { ...result, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "INVITATION_CREATE", targetType: "invitation", targetName: values.name });
+    return { ...result, values };
+  }
   return result;
 }
 
@@ -55,6 +62,7 @@ const ACCEPT_ERRORS: Record<string, string> = {
   NOT_FOUND: INVALID_LINK,
   ALREADY_USED: INVALID_LINK,
   EXPIRED: "초대 링크의 유효기간이 지났습니다. 소속 운수사 또는 지자체 관리자에게 링크 재발급을 요청해주세요.",
+  REVOKED: "해당 초대 링크는 관리자에 의해 취소되었습니다. 관리자에게 새 링크 발급을 요청해 주세요.",
   EMAIL_EXISTS: "이미 가입된 이메일입니다. 로그인 화면에서 기존 비밀번호로 로그인해 주세요.",
   VEHICLE_UNAVAILABLE: "배정 예정 차량에 이미 다른 운전자가 배정되었습니다. 관리자에게 문의해 주세요.",
   FAILED: "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
@@ -64,7 +72,7 @@ export async function acceptInvitationAction(
   _prev: AcceptInvitationState,
   formData: FormData,
 ): Promise<AcceptInvitationState> {
-  const result = await acceptInvitation(createAdminClient(), {
+  const result = await acceptInvitation(createAdminClient(clientIpFromHeaders(await headers())), {
     token: formData.get("token"),
     password: formData.get("password"),
     passwordConfirm: formData.get("passwordConfirm"),
@@ -87,4 +95,39 @@ export async function acceptInvitationAction(
 
   revalidatePath("/", "layout");
   redirect(postLoginPath(result.role, null));
+}
+
+type AccountInviteValues = { orgId: string; name: string; email: string; expiresInHours: string };
+export type InvestigatorInvitationState =
+  | Extract<CreateInvitationResult, { ok: true }>
+  | { ok: false; error: string; values: AccountInviteValues }
+  | { ok: null };
+
+/** 사고조사관 초대. 조직은 슈퍼 관리자만 고르고, 조직 관리자는 서버가 자기 조직으로 고정한다. */
+export async function createInvestigatorInvitationAction(
+  _prev: InvestigatorInvitationState,
+  formData: FormData,
+): Promise<InvestigatorInvitationState> {
+  const values: AccountInviteValues = {
+    orgId: String(formData.get("orgId") ?? "").slice(0, 64),
+    name: String(formData.get("name") ?? "").slice(0, 50),
+    email: String(formData.get("email") ?? "").slice(0, 320),
+    expiresInHours: String(formData.get("expiresInHours") ?? "24"),
+  };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다. 다시 로그인해 주세요.", values };
+  if (!["12", "24", "72"].includes(values.expiresInHours)) return { ok: false, error: "유효 시간을 다시 선택해 주세요.", values };
+
+  const supabase = await createClient();
+  const result = await createInvestigatorInvitation(
+    supabase,
+    user,
+    { orgId: values.orgId || undefined, name: values.name, email: values.email, expiresInHours: values.expiresInHours },
+    getAppBaseUrl(),
+  );
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "INVITATION_CREATE", targetType: "invitation", targetName: values.name });
+    return { ...result, values };
+  }
+  return result;
 }

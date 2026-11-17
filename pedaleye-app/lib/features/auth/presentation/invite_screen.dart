@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app_scope.dart';
@@ -13,6 +14,9 @@ import '../domain/invitation.dart';
 import '../domain/invite_token.dart';
 
 const unusableInviteMessage = '만료되었거나 이미 사용된 초대 링크입니다. 관리자에게 재발급을 요청해 주세요.';
+const revokedInviteMessage = '해당 초대 링크는 관리자에 의해 취소되었습니다. 관리자에게 새 링크 발급을 요청해 주세요.';
+const webOnlyInviteTitle = 'PC 웹 브라우저에서 가입해 주세요';
+const webOnlyInviteMessage = '사고조사관·관리자 계정은 PC 웹 콘솔에서만 이용할 수 있습니다. 받은 초대 링크를 PC 웹 브라우저에서 열어 가입해 주세요.';
 const passwordMismatchMessage = '비밀번호가 일치하지 않습니다.';
 const inviteNetworkMessage = '서버와 통신할 수 없습니다. 네트워크 연결을 확인해 주세요.';
 const rateLimitedMessage = '요청이 너무 많습니다. 1분 뒤 다시 시도해 주세요.';
@@ -28,7 +32,7 @@ class InviteScreen extends StatefulWidget {
   State<InviteScreen> createState() => _InviteScreenState();
 }
 
-enum _Step { enterCode, verifying, unusable, verifyFailed, setPassword, signInFailed }
+enum _Step { enterCode, verifying, unusable, webOnly, verifyFailed, setPassword, signInFailed }
 
 class _InviteScreenState extends State<InviteScreen> {
   final _codeForm = GlobalKey<FormState>();
@@ -44,6 +48,7 @@ class _InviteScreenState extends State<InviteScreen> {
   String? _verifyError;
   String? _submitError;
   bool _submitting = false;
+  bool _revoked = false;
 
   @override
   void initState() {
@@ -84,8 +89,10 @@ class _InviteScreenState extends State<InviteScreen> {
         switch (result) {
           case ValidInvitation():
             _invitation = result;
-            _step = _Step.setPassword;
+            // 운전자가 아닌 초대는 앱에서 가입시키지 않는다(웹 안내)
+            _step = result.webOnly ? _Step.webOnly : _Step.setPassword;
           case UnusableInvitation():
+            _revoked = result.revoked;
             _step = _Step.unusable;
         }
       });
@@ -133,6 +140,7 @@ class _InviteScreenState extends State<InviteScreen> {
       setState(() {
         _submitting = false;
         if (error.failure.invitationUnusable) {
+          _revoked = error.failure == AcceptFailure.revoked;
           _step = _Step.unusable;
         } else {
           _submitError = switch (error.failure) {
@@ -194,8 +202,29 @@ class _InviteScreenState extends State<InviteScreen> {
           icon: Icons.link_off,
           iconColor: AppColors.critical,
           title: '초대 링크를 사용할 수 없습니다',
-          message: unusableInviteMessage,
+          message: _revoked ? revokedInviteMessage : unusableInviteMessage,
           actions: [toLogin],
+        ),
+      ],
+      _Step.webOnly => [
+        StatusMessage(
+          icon: Icons.computer,
+          title: webOnlyInviteTitle,
+          message: webOnlyInviteMessage,
+          actions: [
+            FilledButton.icon(
+              onPressed: () async {
+                final link = AppScope.of(context).webConsoleUrl.replace(path: '/auth/invite', queryParameters: {'token': _token});
+                await Clipboard.setData(ClipboardData(text: link.toString()));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('초대 링크를 복사했습니다.')));
+                }
+              },
+              icon: const Icon(Icons.copy),
+              label: const Text('초대 링크 복사'),
+            ),
+            toLogin,
+          ],
         ),
       ],
       _Step.verifyFailed => [

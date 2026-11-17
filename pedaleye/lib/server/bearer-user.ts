@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { CurrentUser } from "@/lib/auth/get-current-user";
 import type { Database } from "@/lib/supabase/database.types";
+import { clientIp } from "@/lib/server/rate-limit";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /**
@@ -18,7 +19,7 @@ export async function getBearerUser(request: Request) {
   const { url, anonKey } = getSupabasePublicEnv();
   const client = createClient<Database>(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
+    global: { headers: { Authorization: `Bearer ${token}`, "x-pedaleye-client-ip": clientIp(request) } },
   });
 
   const { data, error } = await client.auth.getUser(token);
@@ -29,11 +30,12 @@ export async function getBearerUser(request: Request) {
 
   const { data: profile, error: profileError } = await client
     .from("users")
-    .select("id, email, name, role, org_id")
+    .select("id, email, name, role, org_id, is_active")
     .eq("id", data.user.id)
     .maybeSingle();
   if (profileError) throw new Error(`사용자 프로필 조회 실패 (${profileError.code})`);
-  if (!profile) return null;
+  // 비활성화된 계정은 토큰이 아직 유효해도 거부한다
+  if (!profile || !profile.is_active) return null;
 
   const user: CurrentUser = {
     id: profile.id,

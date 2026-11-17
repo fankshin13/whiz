@@ -1,17 +1,21 @@
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import type { Database } from "@/lib/supabase/database.types";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
+import { clientIpFromHeaders } from "@/lib/server/rate-limit";
 
 /** Server Component · Server Action · Route Handler 용 Supabase 클라이언트. */
 export async function createClient() {
   const cookieStore = await cookies();
   const { url, anonKey } = getSupabasePublicEnv();
+  // 감사 로그가 실제 접속자 IP 를 남기도록 DB 요청에 함께 보낸다(DB 함수 private.audit_request_ip 가 읽음)
+  const ip = clientIpFromHeaders(await headers());
 
   return createServerClient<Database>(url, anonKey, {
+    global: { headers: { "x-pedaleye-client-ip": ip } },
     cookies: {
       getAll() {
         return cookieStore.getAll();

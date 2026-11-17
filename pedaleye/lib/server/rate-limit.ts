@@ -25,5 +25,12 @@ export function createRateLimiter({ limit, windowMs }: { limit: number; windowMs
 
 /** 요청자 IP. Vercel 은 x-forwarded-for 첫 값을 실제 클라이언트로 채운다. */
 export function clientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  return clientIpFromHeaders(request.headers);
+}
+
+/** 헤더에서 접속자 IP 를 읽는다. 감사 로그에 넣을 수 있도록 IP 문자만 남긴다. */
+export function clientIpFromHeaders(headers: Pick<Headers, "get">): string {
+  const raw = headers.get("x-forwarded-for")?.split(",")[0]?.trim() || headers.get("x-real-ip") || "";
+  const ip = raw.replace(/[^0-9a-fA-F:.]/g, "").slice(0, 64);
+  return ip || "unknown";
 }

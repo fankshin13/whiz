@@ -11,6 +11,7 @@ import '../data/auth_repository.dart';
 
 const invalidCredentialsMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
 const networkErrorMessage = '서버와 통신할 수 없습니다. 네트워크 연결을 확인해 주세요.';
+const deactivatedMessage = '계정이 비활성화되었습니다. 관리자에게 문의하세요.';
 const unknownSignInMessage = '일시적인 오류로 로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
 class LoginScreen extends StatefulWidget {
@@ -26,6 +27,17 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _busy = false;
   String? _error;
+  bool _checkedDeactivated = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 남아 있던 세션이 비활성 계정이라 로그아웃된 경우 한 번 안내한다
+    if (!_checkedDeactivated) {
+      _checkedDeactivated = true;
+      if (AppScope.of(context).session.takeAccountDeactivated()) _error = deactivatedMessage;
+    }
+  }
 
   @override
   void dispose() {
@@ -49,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _busy = false;
         _error = switch (error.failure) {
           SignInFailure.invalidCredentials => invalidCredentialsMessage,
+          SignInFailure.deactivated => deactivatedMessage,
           SignInFailure.network => networkErrorMessage,
           SignInFailure.unknown => unknownSignInMessage,
         };

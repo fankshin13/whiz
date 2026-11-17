@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "devices": {
+            "audit_logs": {
+                  Row: {
+                    "action_type": Database["public"]['Enums']["audit_action_type"],"actor_id": string | null,"actor_name": string,"actor_role": Database["public"]['Enums']["user_role"] | null,"changes_summary": NonNullable<Json>,"created_at": string,"id": string,"ip_address": string,"org_id": string | null,"status": Database["public"]['Enums']["audit_status"],"target_display_name": string,"target_id": string,"target_type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action_type": Database["public"]['Enums']["audit_action_type"],"actor_id"?: string | null,"actor_name": string,"actor_role"?: Database["public"]['Enums']["user_role"] | null,"changes_summary"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"ip_address"?: string,"org_id"?: string | null,"status"?: Database["public"]['Enums']["audit_status"],"target_display_name": string,"target_id": string,"target_type": string
+                  }
+                  Update: {
+                    "action_type"?: Database["public"]['Enums']["audit_action_type"],"actor_id"?: string | null,"actor_name"?: string,"actor_role"?: Database["public"]['Enums']["user_role"] | null,"changes_summary"?: NonNullable<Json>,"created_at"?: string,"id"?: string,"ip_address"?: string,"org_id"?: string | null,"status"?: Database["public"]['Enums']["audit_status"],"target_display_name"?: string,"target_id"?: string,"target_type"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"devices": {
                   Row: {
                     "accel_calib_max": number,"accel_calib_min": number,"brake_calib_max": number,"brake_calib_min": number,"created_at": string,"firmware_version": string,"hardware_rev": string,"id": string,"last_synced_at": string | null,"mac_address": string | null,"org_id": string | null,"serial_number": string,"updated_at": string,"vehicle_id": string | null
                   }
@@ -71,14 +85,14 @@ isOneToOne: false
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_user_id": string | null,"created_at": string,"created_by": string,"email": string,"expires_at": string,"id": string,"invitee_name": string,"org_id": string,"role": Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at": string,"used_at": string | null,"vehicle_id": string | null
+                    "accepted_user_id": string | null,"created_at": string,"created_by": string,"email": string,"expires_at": string,"id": string,"invitee_name": string,"org_id": string,"revoked_at": string | null,"revoked_by": string | null,"role": Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at": string,"used_at": string | null,"vehicle_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by": string,"email": string,"expires_at": string,"id"?: string,"invitee_name": string,"org_id": string,"role"?: Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by": string,"email": string,"expires_at": string,"id"?: string,"invitee_name": string,"org_id": string,"revoked_at"?: string | null,"revoked_by"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
                   }
                   Update: {
-                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invitee_name"?: string,"org_id"?: string,"role"?: Database["public"]['Enums']["user_role"],"token_hash"?: string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invitee_name"?: string,"org_id"?: string,"revoked_at"?: string | null,"revoked_by"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"token_hash"?: string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -123,17 +137,23 @@ isOneToOne: false
                   ]
                 },"users": {
                   Row: {
-                    "created_at": string,"email": string,"id": string,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
+                    "created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"id": string,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"id"?: string,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "users_deactivated_by_fkey"
+      columns: ["deactivated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "users_org_id_fkey"
       columns: ["org_id"]
 isOneToOne: false
@@ -176,12 +196,29 @@ isOneToOne: false
             "accept_invitation":
 { Args: { "p_token_hash": string,"p_user_id": string }; Returns: Database["public"]['Enums']["user_role"]
                            },
+"log_admin_audit_event":
+{ Args: { "p_action_type": Database["public"]['Enums']["audit_action_type"],"p_changes_summary"?: Json,"p_status"?: Database["public"]['Enums']["audit_status"],"p_target_display_name"?: string,"p_target_id": string,"p_target_type": string }; Returns: string
+                           },
 "mount_device":
 { Args: { "p_device_id": string,"p_replace"?: boolean,"p_vehicle_id": string }; Returns: Json
+                           },
+"reissue_invitation":
+{ Args: { "p_expires_in_hours": number,"p_invitation_id": string,"p_token_hash": string }; Returns: Json
+                           },
+"revoke_invitation":
+{ Args: { "p_invitation_id": string,"p_reason"?: string }; Returns: Json
+                           },
+"set_user_active":
+{ Args: { "p_active": boolean,"p_demote"?: boolean,"p_reason"?: string,"p_unassign_vehicle"?: boolean,"p_user_id": string }; Returns: Json
+                           },
+"user_last_sign_in":
+{ Args: { "p_user_ids": (string)[] }; Returns: {
+              "id": string,"last_sign_in_at": string
+            }[]
                            }
           }
           Enums: {
-            "organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
+            "audit_action_type": "ORG_CREATE"|"ORG_UPDATE"|"ORG_DELETE"|"VEHICLE_CREATE"|"VEHICLE_UPDATE"|"VEHICLE_DRIVER_UNASSIGN"|"VEHICLE_DELETE"|"DEVICE_CREATE"|"DEVICE_MOUNT"|"DEVICE_REPLACE"|"DEVICE_UNMOUNT"|"DEVICE_CALIBRATE"|"DEVICE_UPDATE"|"DEVICE_DELETE"|"INVITATION_CREATE"|"INVITATION_ACCEPT"|"INVITATION_CANCEL"|"INVITATION_DELETE"|"USER_DEACTIVATE"|"USER_REACTIVATE"|"USER_ROLE_CHANGE"|"REPORT_VIEW"|"REPORT_DOWNLOAD","audit_status": "SUCCESS"|"DENIED","organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -301,7 +338,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
+            "audit_action_type": ["ORG_CREATE", "ORG_UPDATE", "ORG_DELETE", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DRIVER_UNASSIGN", "VEHICLE_DELETE", "DEVICE_CREATE", "DEVICE_MOUNT", "DEVICE_REPLACE", "DEVICE_UNMOUNT", "DEVICE_CALIBRATE", "DEVICE_UPDATE", "DEVICE_DELETE", "INVITATION_CREATE", "INVITATION_ACCEPT", "INVITATION_CANCEL", "INVITATION_DELETE", "USER_DEACTIVATE", "USER_REACTIVATE", "USER_ROLE_CHANGE", "REPORT_VIEW", "REPORT_DOWNLOAD"],"audit_status": ["SUCCESS", "DENIED"],"organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
           }
         }
 } as const

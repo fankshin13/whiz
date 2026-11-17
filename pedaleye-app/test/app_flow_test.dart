@@ -9,6 +9,7 @@ import 'package:pedaleye_app/features/home/presentation/home_screen.dart';
 
 import 'package:pedaleye_app/core/text/keep_all.dart';
 import 'package:pedaleye_app/features/auth/data/auth_repository.dart';
+import 'package:pedaleye_app/features/auth/domain/invitation.dart';
 
 import 'fakes.dart';
 
@@ -55,6 +56,19 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, '로그인'));
         await tester.pumpAndSettle();
         expect(find.text(keepAll(networkErrorMessage)), findsOneWidget);
+
+        auth.nextSignInFailure = SignInFailure.deactivated;
+        await tester.tap(find.widgetWithText(FilledButton, '로그인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(deactivatedMessage)), findsOneWidget);
+      });
+
+      testWidgets('비활성화된 계정의 남은 세션은 로그인 화면으로 돌아가 안내한다', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        final auth = fakeAuth(signedInAs: driverId)..deactivated = true;
+        await pumpApp(tester, auth: auth);
+        expect(find.byType(HomeScreen), findsNothing);
+        expect(find.text(keepAll(deactivatedMessage)), findsOneWidget);
       });
 
       testWidgets('관리자 로그인은 운전자 전용 안내로 격리되고 홈 데이터를 읽지 않는다', (tester) async {
@@ -138,6 +152,43 @@ void main() {
         await tester.tap(find.widgetWithText(OutlinedButton, '로그인 화면으로 이동'));
         await tester.pumpAndSettle();
         expect(find.byType(LoginScreen), findsOneWidget);
+      });
+
+      testWidgets('사고조사관 초대는 앱에서 가입하지 않고 웹 이용 안내', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        var accepts = 0;
+        await pumpApp(
+          tester,
+          auth: fakeAuth(),
+          invites: fakeInvites((path, _) {
+            if (path.endsWith('/accept')) accepts += 1;
+            return (200, {'isValid': true, 'email': 'i@x.kr', 'inviteeName': '조사관', 'orgName': '조직', 'vehiclePlate': null, 'role': 'investigator'});
+          }),
+        );
+        await tester.tap(find.widgetWithText(TextButton, '초대 수락'));
+        await tester.pumpAndSettle();
+        await tester.enterText(field('초대 링크 또는 코드'), token);
+        await tester.tap(find.widgetWithText(FilledButton, '초대 확인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(webOnlyInviteMessage)), findsOneWidget);
+        expect(find.text('새 비밀번호'), findsNothing);
+        expect(accepts, 0);
+      });
+
+      testWidgets('관리자가 취소한 초대는 취소 안내(확인·수락 단계 모두)', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        await pumpApp(
+          tester,
+          auth: fakeAuth(),
+          invites: fakeInvites((_, _) => (200, {'isValid': false, 'reason': 'REVOKED'})),
+        );
+        await tester.tap(find.widgetWithText(TextButton, '초대 수락'));
+        await tester.pumpAndSettle();
+        await tester.enterText(field('초대 링크 또는 코드'), token);
+        await tester.tap(find.widgetWithText(FilledButton, '초대 확인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(revokedInviteMessage)), findsOneWidget);
+        expect(AcceptFailure.fromCode('REVOKED').invitationUnusable, isTrue);
       });
 
       testWidgets('비밀번호 설정 중 초대가 만료되면 같은 거부 안내', (tester) async {

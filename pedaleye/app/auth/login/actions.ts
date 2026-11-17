@@ -18,6 +18,9 @@ const loginSchema = z.object({
   redirectTo: z.string().max(512).optional(),
 });
 
+const DEACTIVATED_MESSAGE = "관리자에 의해 비활성화된 계정입니다. 소속 관리자에게 문의하세요.";
+const DEACTIVATED = DEACTIVATED_MESSAGE;
+
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").slice(0, 320);
   const fail = (error: string): LoginState => ({ error, email });
@@ -37,6 +40,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   });
 
   if (error) {
+    // 비활성화된 계정(Auth ban). 비밀번호가 맞을 때만 이 코드가 오므로 계정 존재 여부가 새지 않는다
+    if (error.code === "user_banned") return fail(DEACTIVATED);
     if (error.code === "invalid_credentials" || error.status === 400) return fail(INVALID_CREDENTIALS);
     // 무차별 대입 방어: Supabase Auth 의 로그인 횟수 제한(config.toml auth.rate_limit)
     if (error.status === 429) return fail("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.");
@@ -46,7 +51,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("role")
+    .select("role, is_active")
     .eq("id", data.user.id)
     .maybeSingle();
 
@@ -55,6 +60,11 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     const { error: signOutError } = await supabase.auth.signOut();
     if (signOutError) console.error("signOut after profile failure failed", { status: signOutError.status });
     return fail(TEMPORARY_FAILURE);
+  }
+
+  if (!profile.is_active) {
+    await supabase.auth.signOut({ scope: "local" });
+    return fail(DEACTIVATED);
   }
 
   revalidatePath("/", "layout");

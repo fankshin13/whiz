@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createOrgAdminInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
 import { createOrganization, updateOrganization } from "@/lib/organizations/operations";
@@ -35,7 +36,10 @@ export async function saveOrganizationAction(
     typeof id === "string" && id
       ? await updateOrganization(supabase, user, { id, ...values })
       : await createOrganization(supabase, user, values);
-  if (!result.ok) return { ok: false, error: result.error, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: id ? "ORG_UPDATE" : "ORG_CREATE", targetType: "organization", targetId: typeof id === "string" ? id : null, targetName: values.name });
+    return { ok: false, error: result.error, values };
+  }
 
   revalidatePath("/admin/organizations");
   return { ok: true, message: id ? "조직 정보가 변경되었습니다." : "새로운 조직이 생성되었습니다." };
@@ -59,12 +63,16 @@ export async function createOrgAdminInvitationAction(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: LOGIN_REQUIRED, values };
 
+  const supabase = await createClient();
   const result = await createOrgAdminInvitation(
-    await createClient(),
+    supabase,
     user,
     { orgId: formData.get("orgId"), ...values },
     getAppBaseUrl(),
   );
-  if (!result.ok) return { ...result, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "INVITATION_CREATE", targetType: "invitation", targetName: values.name });
+    return { ...result, values };
+  }
   return result;
 }

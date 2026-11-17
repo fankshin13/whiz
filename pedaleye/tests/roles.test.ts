@@ -11,7 +11,12 @@ describe("라우트 권한 맵", () => {
     expect(allowedRolesForPath("/devices/calibrate")).toEqual(["super_admin", "org_admin", "driver"]);
     expect(allowedRolesForPath("/devices")).toEqual(["super_admin", "org_admin"]);
     expect(allowedRolesForPath("/devices/")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/audit")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/audit/export")).toEqual(["super_admin", "org_admin"]);
     expect(allowedRolesForPath("/admin/organizations")).toEqual(["super_admin"]);
+    expect(allowedRolesForPath("/users")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/organizations")).toEqual(["super_admin"]);
+    expect(allowedRolesForPath("/users")).toEqual(["super_admin", "org_admin"]);
   });
 
   it("공개 경로와 비슷한 이름의 경로는 보호 대상이 아니다", () => {

@@ -47,4 +47,15 @@ void main() {
     await session.retryRoleCheck();
     expect(session.status, SessionStatus.driver);
   });
+
+  test('비활성화된 계정의 남은 세션은 로그아웃되고 안내 표시가 한 번 남는다', () async {
+    final auth = fakeAuth(signedInAs: driverId)..deactivated = true;
+    final session = SessionController(auth);
+    await session.start();
+    await pumpEventQueue();
+    expect(session.status, SessionStatus.signedOut);
+    expect(auth.signOuts, 1);
+    expect(session.takeAccountDeactivated(), isTrue);
+    expect(session.takeAccountDeactivated(), isFalse);
+  });
 }

@@ -3,19 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 import { unassignDriver, upsertVehicle } from "@/lib/vehicles/operations";
 
 const LOGIN_REQUIRED = { ok: false, error: "로그인이 필요합니다." } as const;
-
-export async function upsertVehicleAction(input: unknown) {
-  const user = await getCurrentUser();
-  if (!user) return LOGIN_REQUIRED;
-  const result = await upsertVehicle(await createClient(), user, input);
-  if (result.ok) revalidatePath("/vehicles");
-  return result;
-}
 
 // ── 화면 폼용(useActionState) ───────────────────────────────────────────
 
@@ -39,7 +32,8 @@ export async function saveVehicleAction(_prev: VehicleFormState, formData: FormD
   if (!user) return { ok: false, error: LOGIN_REQUIRED.error, values };
 
   const id = String(formData.get("id") ?? "") || undefined;
-  const result = await upsertVehicle(await createClient(), user, {
+  const supabase = await createClient();
+  const result = await upsertVehicle(supabase, user, {
     id,
     org_id: values.orgId || undefined,
     plate_number: values.plateNumber,
@@ -47,7 +41,10 @@ export async function saveVehicleAction(_prev: VehicleFormState, formData: FormD
     model_year: values.modelYear.trim() || undefined,
     vin_masked: values.vinMasked,
   });
-  if (!result.ok) return { ok: false, error: result.error, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: id ? "VEHICLE_UPDATE" : "VEHICLE_CREATE", targetType: "vehicle", targetId: id, targetName: values.plateNumber });
+    return { ok: false, error: result.error, values };
+  }
 
   revalidatePath("/vehicles");
   revalidatePath(`/vehicles/${result.data.id}`);
@@ -60,8 +57,12 @@ export async function unassignDriverAction(_prev: UnassignState, formData: FormD
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: LOGIN_REQUIRED.error };
   const vehicleId = String(formData.get("vehicleId") ?? "");
-  const result = await unassignDriver(await createClient(), user, vehicleId);
-  if (!result.ok) return { ok: false, error: result.error };
+  const supabase = await createClient();
+  const result = await unassignDriver(supabase, user, vehicleId);
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "VEHICLE_DRIVER_UNASSIGN", targetType: "vehicle", targetId: vehicleId });
+    return { ok: false, error: result.error };
+  }
   revalidatePath("/vehicles");
   // 해제되면 대화상자가 들어 있던 운전자 영역이 사라지므로, 서버에서 바로 안내 화면으로 보낸다
   redirect(`/vehicles/${vehicleId}?notice=unassigned`);
