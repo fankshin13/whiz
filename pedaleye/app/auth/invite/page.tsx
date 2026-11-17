@@ -19,6 +19,7 @@ const FAILURE_MESSAGES: Record<InvitationFailure, string> = {
   ALREADY_USED:
     "유효하지 않거나 이미 사용이 완료된 초대 링크입니다. 소속 운수사 또는 지자체 관리자에게 링크 재발급을 요청해주세요.",
   EXPIRED: "초대 링크의 유효기간이 지났습니다. 소속 운수사 또는 지자체 관리자에게 링크 재발급을 요청해주세요.",
+  REVOKED: "해당 초대 링크는 관리자에 의해 취소되었습니다. 관리자에게 새 링크 발급을 요청해 주세요.",
 };
 
 export default async function InvitePage({

@@ -34,6 +34,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
       .from("invitations")
       .select("vehicle_id, invitee_name, expires_at")
       .is("used_at", null)
+      .is("revoked_at", null)
       .gt("expires_at", new Date().toISOString()),
     // 슈퍼 관리자는 등록할 조직을 고르고, 조직 관리자는 자기 조직(RLS 로 하나만 보임)
     supabase.from("organizations").select("id, name").order("name"),

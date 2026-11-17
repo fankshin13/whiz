@@ -12,10 +12,12 @@ class ValidInvitation extends InvitationCheck {
   final String? vehiclePlate;
 }
 
-/// 없음·만료·이미 사용. 화면에서는 같은 안내로 보여 준다.
+/// 없음·만료·이미 사용·관리자 취소. 취소만 따로 안내한다.
 class UnusableInvitation extends InvitationCheck {
   const UnusableInvitation(this.reason);
   final String reason;
+
+  bool get revoked => reason == 'REVOKED';
 }
 
 /// POST /api/invitations/accept 실패 사유. 웹 서버의 reason 코드와 같다.
@@ -23,6 +25,7 @@ enum AcceptFailure {
   notFound,
   alreadyUsed,
   expired,
+  revoked,
   emailExists,
   vehicleUnavailable,
   invalidInput,
@@ -33,6 +36,7 @@ enum AcceptFailure {
     'NOT_FOUND' => notFound,
     'ALREADY_USED' => alreadyUsed,
     'EXPIRED' => expired,
+    'REVOKED' => revoked,
     'EMAIL_EXISTS' => emailExists,
     'VEHICLE_UNAVAILABLE' => vehicleUnavailable,
     'INVALID_INPUT' => invalidInput,
@@ -41,7 +45,7 @@ enum AcceptFailure {
   };
 
   /// 초대 자체를 더 쓸 수 없는 경우(재발급 필요)
-  bool get invitationUnusable => this == notFound || this == alreadyUsed || this == expired;
+  bool get invitationUnusable => this == notFound || this == alreadyUsed || this == expired || this == revoked;
 }
 
 class AcceptInviteException implements Exception {

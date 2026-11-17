@@ -13,6 +13,7 @@ import '../domain/invitation.dart';
 import '../domain/invite_token.dart';
 
 const unusableInviteMessage = '만료되었거나 이미 사용된 초대 링크입니다. 관리자에게 재발급을 요청해 주세요.';
+const revokedInviteMessage = '해당 초대 링크는 관리자에 의해 취소되었습니다. 관리자에게 새 링크 발급을 요청해 주세요.';
 const passwordMismatchMessage = '비밀번호가 일치하지 않습니다.';
 const inviteNetworkMessage = '서버와 통신할 수 없습니다. 네트워크 연결을 확인해 주세요.';
 const rateLimitedMessage = '요청이 너무 많습니다. 1분 뒤 다시 시도해 주세요.';
@@ -44,6 +45,7 @@ class _InviteScreenState extends State<InviteScreen> {
   String? _verifyError;
   String? _submitError;
   bool _submitting = false;
+  bool _revoked = false;
 
   @override
   void initState() {
@@ -86,6 +88,7 @@ class _InviteScreenState extends State<InviteScreen> {
             _invitation = result;
             _step = _Step.setPassword;
           case UnusableInvitation():
+            _revoked = result.revoked;
             _step = _Step.unusable;
         }
       });
@@ -133,6 +136,7 @@ class _InviteScreenState extends State<InviteScreen> {
       setState(() {
         _submitting = false;
         if (error.failure.invitationUnusable) {
+          _revoked = error.failure == AcceptFailure.revoked;
           _step = _Step.unusable;
         } else {
           _submitError = switch (error.failure) {
@@ -194,7 +198,7 @@ class _InviteScreenState extends State<InviteScreen> {
           icon: Icons.link_off,
           iconColor: AppColors.critical,
           title: '초대 링크를 사용할 수 없습니다',
-          message: unusableInviteMessage,
+          message: _revoked ? revokedInviteMessage : unusableInviteMessage,
           actions: [toLogin],
         ),
       ],

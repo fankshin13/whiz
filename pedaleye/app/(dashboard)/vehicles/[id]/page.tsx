@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { InviteDriverModal } from "@/components/fleet/invite-driver-modal";
+import { ReissueInvitationDialog, RevokeInvitationDialog } from "@/components/invitations/invitation-dialogs";
 import { PageHeader } from "@/components/page/page-header";
 import { Section } from "@/components/page/section";
 import { UnassignDriverDialog, VehicleFormDialog } from "@/components/vehicles/vehicle-dialogs";
@@ -14,6 +15,7 @@ export const metadata: Metadata = { title: "차량 상세 | 페달아이" };
 const NOTICES: Record<string, string> = {
   updated: "차량 정보가 변경되었습니다.",
   unassigned: "운전자 배정을 해제했습니다. 이제 새 운전자를 초대할 수 있습니다.",
+  invitation_revoked: "초대 링크가 정상적으로 취소되었습니다. 이제 새 운전자를 초대할 수 있습니다.",
 };
 
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
@@ -70,9 +72,10 @@ export default async function VehicleDetailPage({
     ? (
         await supabase
           .from("invitations")
-          .select("invitee_name, expires_at")
+          .select("id, invitee_name, email, expires_at")
           .eq("vehicle_id", vehicle.id)
           .is("used_at", null)
+          .is("revoked_at", null)
           .gt("expires_at", new Date().toISOString())
           .maybeSingle()
       ).data
@@ -169,9 +172,20 @@ export default async function VehicleDetailPage({
             {canManage ? <UnassignDriverDialog vehicleId={vehicle.id} driverName={vehicle.driver.name} /> : null}
           </div>
         ) : pendingInvite ? (
-          <p className="m-0 text-text-muted">
-            초대 대기 중: {pendingInvite.invitee_name} (만료 {dateTime.format(new Date(pendingInvite.expires_at))})
-          </p>
+          <div className="grid gap-3">
+            <p className="m-0 text-text-muted">
+              초대 대기 중: {pendingInvite.invitee_name} (만료 {dateTime.format(new Date(pendingInvite.expires_at))})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <ReissueInvitationDialog
+                invitation={{ id: pendingInvite.id, inviteeName: pendingInvite.invitee_name, email: pendingInvite.email, vehiclePlate: vehicle.plate_number }}
+              />
+              <RevokeInvitationDialog
+                invitation={{ id: pendingInvite.id, inviteeName: pendingInvite.invitee_name, email: pendingInvite.email, vehiclePlate: vehicle.plate_number }}
+                returnTo={`/vehicles/${vehicle.id}`}
+              />
+            </div>
+          </div>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="m-0 text-text-muted">배정된 운전자가 없습니다.</p>

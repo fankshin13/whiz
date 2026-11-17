@@ -9,6 +9,7 @@ import 'package:pedaleye_app/features/home/presentation/home_screen.dart';
 
 import 'package:pedaleye_app/core/text/keep_all.dart';
 import 'package:pedaleye_app/features/auth/data/auth_repository.dart';
+import 'package:pedaleye_app/features/auth/domain/invitation.dart';
 
 import 'fakes.dart';
 
@@ -151,6 +152,22 @@ void main() {
         await tester.tap(find.widgetWithText(OutlinedButton, '로그인 화면으로 이동'));
         await tester.pumpAndSettle();
         expect(find.byType(LoginScreen), findsOneWidget);
+      });
+
+      testWidgets('관리자가 취소한 초대는 취소 안내(확인·수락 단계 모두)', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        await pumpApp(
+          tester,
+          auth: fakeAuth(),
+          invites: fakeInvites((_, _) => (200, {'isValid': false, 'reason': 'REVOKED'})),
+        );
+        await tester.tap(find.widgetWithText(TextButton, '초대 수락'));
+        await tester.pumpAndSettle();
+        await tester.enterText(field('초대 링크 또는 코드'), token);
+        await tester.tap(find.widgetWithText(FilledButton, '초대 확인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(revokedInviteMessage)), findsOneWidget);
+        expect(AcceptFailure.fromCode('REVOKED').invitationUnusable, isTrue);
       });
 
       testWidgets('비밀번호 설정 중 초대가 만료되면 같은 거부 안내', (tester) async {

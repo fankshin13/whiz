@@ -85,14 +85,14 @@ isOneToOne: false
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_user_id": string | null,"created_at": string,"created_by": string,"email": string,"expires_at": string,"id": string,"invitee_name": string,"org_id": string,"role": Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at": string,"used_at": string | null,"vehicle_id": string | null
+                    "accepted_user_id": string | null,"created_at": string,"created_by": string,"email": string,"expires_at": string,"id": string,"invitee_name": string,"org_id": string,"revoked_at": string | null,"revoked_by": string | null,"role": Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at": string,"used_at": string | null,"vehicle_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by": string,"email": string,"expires_at": string,"id"?: string,"invitee_name": string,"org_id": string,"role"?: Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by": string,"email": string,"expires_at": string,"id"?: string,"invitee_name": string,"org_id": string,"revoked_at"?: string | null,"revoked_by"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"token_hash": string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
                   }
                   Update: {
-                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invitee_name"?: string,"org_id"?: string,"role"?: Database["public"]['Enums']["user_role"],"token_hash"?: string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
+                    "accepted_user_id"?: string | null,"created_at"?: string,"created_by"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invitee_name"?: string,"org_id"?: string,"revoked_at"?: string | null,"revoked_by"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"token_hash"?: string,"updated_at"?: string,"used_at"?: string | null,"vehicle_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -201,6 +201,12 @@ isOneToOne: false
                            },
 "mount_device":
 { Args: { "p_device_id": string,"p_replace"?: boolean,"p_vehicle_id": string }; Returns: Json
+                           },
+"reissue_invitation":
+{ Args: { "p_expires_in_hours": number,"p_invitation_id": string,"p_token_hash": string }; Returns: Json
+                           },
+"revoke_invitation":
+{ Args: { "p_invitation_id": string,"p_reason"?: string }; Returns: Json
                            },
 "set_user_active":
 { Args: { "p_active": boolean,"p_demote"?: boolean,"p_reason"?: string,"p_unassign_vehicle"?: boolean,"p_user_id": string }; Returns: Json

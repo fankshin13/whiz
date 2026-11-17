@@ -19,7 +19,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return jsonResponse({ error: "INVALID_INPUT" }, 400);
 
   const invitation = await lookupInvitation(createAdminClient(), parsed.data.token.trim());
-  if (!invitation.valid) return jsonResponse({ isValid: false, reason: invitation.reason });
+  if (!invitation.valid) {
+    // 취소 사유를 모르는 이전 버전 앱도 안내할 수 있도록 문구를 함께 보낸다
+    const message = invitation.reason === "REVOKED" ? { message: "관리자에 의해 취소된 초대 링크입니다." } : {};
+    return jsonResponse({ isValid: false, reason: invitation.reason, ...message });
+  }
 
   return jsonResponse({
     isValid: true,
