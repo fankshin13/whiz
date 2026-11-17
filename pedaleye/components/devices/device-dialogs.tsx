@@ -1,12 +1,14 @@
 "use client";
 
-import { Link2, Plus, Unlink } from "lucide-react";
+import { KeyRound, Link2, Plus, Unlink } from "lucide-react";
 import { useActionState, useRef, useState } from "react";
 
 import { ModalDialog } from "@/components/page/modal-dialog";
 import {
   mountDeviceAction,
   registerDeviceAction,
+  setDevicePublicKeyAction,
+  type DeviceKeyState,
   unmountDeviceAction,
   type MountDeviceState,
   type RegisterDeviceState,
@@ -68,7 +70,7 @@ function RegisterForm({ organizations }: { organizations: { id: string; name: st
   const values =
     state.ok === false
       ? state.values
-      : { orgId: organizations[0]?.id ?? "", serialNumber: "", macAddress: "", hardwareRev: "v1.0", firmwareVersion: "1.0.0" };
+      : { orgId: organizations[0]?.id ?? "", serialNumber: "", macAddress: "", hardwareRev: "v1.0", firmwareVersion: "1.0.0", publicKey: "" };
   const field = (name: string) => `device-register-${name}`;
 
   if (organizations.length === 0) {
@@ -143,6 +145,7 @@ function RegisterForm({ organizations }: { organizations: { id: string; name: st
           <input key={`fw-${values.firmwareVersion}`} id={field("fw")} name="firmwareVersion" className="input" maxLength={20} defaultValue={values.firmwareVersion} disabled={pending} />
         </div>
       </div>
+      <PublicKeyField id={field("key")} defaultValue={values.publicKey} disabled={pending} />
       <button type="submit" className="btn" disabled={pending}>
         {pending ? (
           <>
@@ -153,6 +156,128 @@ function RegisterForm({ organizations }: { organizations: { id: string; name: st
           "단말 등록"
         )}
       </button>
+    </form>
+  );
+}
+
+function PublicKeyField({
+  id,
+  defaultValue,
+  disabled,
+  label = "인증 공개키 (Ed25519)",
+  required = false,
+}: {
+  id: string;
+  defaultValue: string;
+  disabled: boolean;
+  label?: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="grid gap-1">
+      <label htmlFor={id} className="font-semibold">
+        {label} <span className="font-normal text-text-muted">{required ? "(필수)" : "(선택)"}</span>
+      </label>
+      <input
+        key={`key-${defaultValue}`}
+        id={id}
+        name="publicKey"
+        className="input font-mono"
+        maxLength={200}
+        placeholder="Base64 44자 또는 Hex 64자"
+        aria-describedby={`${id}-hint`}
+        defaultValue={defaultValue}
+        autoCapitalize="off"
+        autoComplete="off"
+        spellCheck={false}
+        required={required}
+        disabled={disabled}
+      />
+      <span id={`${id}-hint`} className="text-caption text-text-muted">
+        공장 출하 성적서의 32바이트 Ed25519 공개키(Base64 44자 또는 Hex 64자)입니다.
+        {required ? null : " 비워 두면 '인증 미설정(시험 단말)'로 등록됩니다."}
+      </span>
+    </div>
+  );
+}
+
+// ── 인증 공개키 교체·해제(슈퍼 관리자) ─────────────────────────────────
+
+const initialKeyState: DeviceKeyState = { ok: null };
+
+export function DevicePublicKeyDialog({ deviceId, serialNumber, maskedKey }: { deviceId: string; serialNumber: string; maskedKey: string | null }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [formKey, setFormKey] = useState(0);
+  const id = `device-key-${deviceId}`;
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        aria-haspopup="dialog"
+        onClick={() => {
+          setFormKey((k) => k + 1);
+          dialogRef.current?.showModal();
+        }}
+      >
+        <KeyRound aria-hidden="true" size={18} />
+        {maskedKey ? "인증 키 교체" : "인증 키 등록"}
+      </button>
+      <ModalDialog
+        id={id}
+        dialogRef={dialogRef}
+        title={maskedKey ? "단말 인증 키 교체" : "단말 인증 키 등록"}
+        description={`단말 ${serialNumber}${maskedKey ? ` · 현재 키 ${maskedKey}` : " · 인증 미설정(시험 단말)"}`}
+      >
+        <DeviceKeyForm key={formKey} id={id} deviceId={deviceId} hasKey={!!maskedKey} close={() => dialogRef.current?.close()} />
+      </ModalDialog>
+    </>
+  );
+}
+
+function DeviceKeyForm({ id, deviceId, hasKey, close }: { id: string; deviceId: string; hasKey: boolean; close: () => void }) {
+  const [state, formAction, pending] = useActionState(setDevicePublicKeyAction, initialKeyState);
+  const [revoke, setRevoke] = useState(false);
+  return (
+    <form action={formAction} className="grid gap-4" aria-busy={pending}>
+      <ErrorSlot error={state.ok === false ? state.error : null} />
+      <input type="hidden" name="deviceId" value={deviceId} />
+      <p className="alert m-0">
+        공개키가 바뀌면 운전자 앱은 새 키로 서명한 단말만 연결합니다. 단말 교체·재생산처럼 출하 정보가 바뀐 경우에만 바꾸세요. 변경 내용과 사유는 감사 로그에 남습니다.
+      </p>
+      {hasKey ? (
+        <label className="flex min-h-11 items-center gap-3 font-semibold">
+          <input type="checkbox" name="revoke" className="size-5" checked={revoke} onChange={(e) => setRevoke(e.target.checked)} disabled={pending} />
+          키 등록 해제(시험 단말로 전환)
+        </label>
+      ) : null}
+      {revoke ? null : <PublicKeyField id={`${id}-key`} defaultValue={state.ok === false ? state.publicKey : ""} disabled={pending} label="새 인증 공개키" required />}
+      <div className="grid gap-1">
+        <label htmlFor={`${id}-reason`} className="font-semibold">
+          사유 <span className="font-normal text-text-muted">(필수)</span>
+        </label>
+        <input
+          key={`reason-${state.ok === false ? state.reason : ""}`}
+          id={`${id}-reason`}
+          name="reason"
+          className="input"
+          required
+          minLength={2}
+          maxLength={200}
+          placeholder="예: 단말 교체(재생산), 출하 정보 정정"
+          defaultValue={state.ok === false ? state.reason : ""}
+          disabled={pending}
+        />
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className={revoke ? "btn border-critical bg-critical text-white" : "btn"} disabled={pending}>
+          {pending ? <Spinner /> : <KeyRound aria-hidden="true" size={18} />}
+          {pending ? "저장 중..." : revoke ? "키 등록 해제" : "키 저장"}
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={close} disabled={pending}>
+          취소
+        </button>
+      </div>
     </form>
   );
 }

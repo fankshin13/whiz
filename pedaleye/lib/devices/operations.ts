@@ -18,6 +18,29 @@ export const SERIAL_DUPLICATE_ERROR = "이미 등록된 단말 일련번호입�
 export const MAC_PATTERN = /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/;
 export const MAC_FORMAT_ERROR = "MAC 주소 형식이 올바르지 않습니다. (예: AA:BB:CC:DD:EE:FF)";
 
+export const PUBLIC_KEY_FORMAT_ERROR = "올바른 32바이트 Ed25519 공개키 형식이 아닙니다 (Base64 44자 또는 Hex 64자 필요).";
+
+/**
+ * 단말 인증 공개키 입력을 표준 Base64(44자)로 바꾼다. 빈 값은 null(미등록·시험 단말).
+ * Hex 64자도 받는다. 형식이 틀리면 undefined.
+ */
+export function normalizePublicKey(input: string | null | undefined): string | null | undefined {
+  const value = (input ?? "").replace(/\s+/g, "");
+  if (!value) return null;
+  let bytes: Buffer | null = null;
+  if (/^[0-9a-fA-F]{64}$/.test(value)) bytes = Buffer.from(value, "hex");
+  else if (/^[A-Za-z0-9+/]{43}=$/.test(value)) bytes = Buffer.from(value, "base64");
+  if (!bytes || bytes.length !== 32) return undefined;
+  const canonical = bytes.toString("base64");
+  // 끝자리 비트가 다른 비표준 Base64 는 거부(DB 제약과 같은 기준)
+  return /^[A-Za-z0-9+/]{43}=$/.test(value) && canonical !== value ? undefined : canonical;
+}
+
+/** 화면 표시용: 앞 8자 … 뒤 4자 */
+export function maskPublicKey(key: string | null): string | null {
+  return key ? `${key.slice(0, 8)}…${key.slice(-5, -1)}` : null;
+}
+
 const MOUNT_ERRORS: Record<string, string> = {
   FORBIDDEN: NO_PERMISSION,
   VEHICLE_NOT_FOUND: "차량을 찾을 수 없거나 관리 권한이 없습니다.",
@@ -51,6 +74,8 @@ export interface DeviceListItem {
   vehicle: { id: string; plateNumber: string } | null;
   needsCalibration: boolean;
   lastSyncedAt: string | null;
+  /** 인증 공개키(Base64). null = 인증 미설정(시험 단말) */
+  authPublicKey: string | null;
 }
 
 /** 관리 화면 단말 목록. 범위는 RLS 가 정한다(슈퍼 관리자 전체, 조직 관리자 자기 조직 장착·재고). */
@@ -59,7 +84,7 @@ export async function listDevices(supabase: Client, user: Operator): Promise<Dev
   const { data, error } = await supabase
     .from("devices")
     .select(
-      "id, serial_number, mac_address, hardware_rev, firmware_version, org_id, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max, last_synced_at, organization:organizations(name), vehicle:vehicles(id, plate_number)",
+      "id, serial_number, mac_address, hardware_rev, firmware_version, org_id, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max, last_synced_at, auth_public_key, organization:organizations(name), vehicle:vehicles(id, plate_number)",
     )
     .order("serial_number");
   if (error) throw new Error(`단말 조회 실패 (${error.code})`);
@@ -77,6 +102,7 @@ export async function listDevices(supabase: Client, user: Operator): Promise<Dev
       vehicle: row.vehicle ? { id: row.vehicle.id, plateNumber: row.vehicle.plate_number } : null,
       needsCalibration: row.vehicle !== null && isFactoryCalibrated(row),
       lastSyncedAt: row.last_synced_at,
+      authPublicKey: row.auth_public_key,
     }));
 }
 
@@ -93,6 +119,18 @@ export const registerDeviceSchema = z.object({
     .optional(),
   hardware_rev: z.string().trim().max(20, "하드웨어 버전은 20자 이하로 입력해 주세요.").transform((value) => value || "v1.0").optional(),
   firmware_version: z.string().trim().max(20, "펌웨어 버전은 20자 이하로 입력해 주세요.").transform((value) => value || "1.0.0").optional(),
+  auth_public_key: z
+    .string()
+    .max(200)
+    .optional()
+    .transform((value, ctx) => {
+      const key = normalizePublicKey(value);
+      if (key === undefined) {
+        ctx.addIssue({ code: "custom", message: PUBLIC_KEY_FORMAT_ERROR });
+        return z.NEVER;
+      }
+      return key;
+    }),
 });
 
 /** 단말 재고 등록(슈퍼 관리자만). 등록한 조직의 미장착 재고가 된다. */
@@ -157,4 +195,36 @@ export async function unmountDevice(supabase: Client, user: Operator, deviceId: 
   }
   if (data.length === 0) return { ok: false, error: "장착된 단말을 찾을 수 없거나 관리 권한이 없습니다." };
   return { ok: true, data: null };
+}
+
+const KEY_ERRORS: Record<string, string> = {
+  FORBIDDEN: "단말 인증 공개키를 바꿀 권한이 없습니다. 최고 관리자만 등록하거나 수정할 수 있습니다.",
+  REASON_REQUIRED: "교체·해제 사유를 입력해 주세요(감사 로그에 기록).",
+  NOT_FOUND: "단말을 찾을 수 없습니다.",
+};
+
+/** 인증 공개키 교체·해제(슈퍼 관리자, 사유 필수). 빈 키 = 해제(시험 단말로 전환). */
+export async function setDevicePublicKey(
+  supabase: Client,
+  user: Operator,
+  input: { deviceId: unknown; publicKey: unknown; reason: unknown },
+): Promise<OperationResult<{ changed: boolean }>> {
+  if (user.role !== "super_admin") return { ok: false, error: KEY_ERRORS.FORBIDDEN ?? NO_PERMISSION };
+  const id = z.guid().safeParse(input.deviceId);
+  if (!id.success) return { ok: false, error: "단말을 찾을 수 없습니다." };
+  const key = normalizePublicKey(typeof input.publicKey === "string" ? input.publicKey : "");
+  if (key === undefined) return { ok: false, error: PUBLIC_KEY_FORMAT_ERROR };
+  const reason = typeof input.reason === "string" ? input.reason.trim().slice(0, 200) : "";
+
+  const { data, error } = await supabase.rpc("set_device_public_key", { p_device_id: id.data, // 해제(null)도 그대로 보낸다
+    p_public_key: key as string,
+    p_reason: reason, });
+  if (error) {
+    const known = KEY_ERRORS[error.message];
+    if (known) return { ok: false, error: known };
+    if (error.code === "23514") return { ok: false, error: PUBLIC_KEY_FORMAT_ERROR };
+    console.error("setDevicePublicKey failed", { code: error.code });
+    return { ok: false, error: TEMPORARY_FAILURE };
+  }
+  return { ok: true, data: { changed: (data as { changed: boolean }).changed } };
 }

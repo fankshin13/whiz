@@ -115,6 +115,35 @@ const eventWindowSeconds = 30;
 
 enum RecorderState { idle, active, triggered, frozen }
 
+/// 단말이 만든 기록의 봉인 정보(docs/ble-protocol.md 5.6). 앱이 만든 기록에는 없다.
+class DeviceSeal {
+  const DeviceSeal({required this.serial, required this.sessionIndex, required this.signatureBase64, required this.finalHashHex});
+
+  /// 기록을 만든 단말 일련번호(해시 체인 시작값의 기준)
+  final String serial;
+
+  /// 단말 안의 세션 번호(u32)
+  final int sessionIndex;
+
+  /// Ed25519 봉인 서명(64바이트) Base64
+  final String signatureBase64;
+
+  /// 단말 목록에 실린 최종 해시(전송 받은 파일과 같아야 함)
+  final String finalHashHex;
+
+  Map<String, Object?> toJson() => {'serial': serial, 'sessionIndex': sessionIndex, 'signature': signatureBase64, 'finalHash': finalHashHex};
+
+  static DeviceSeal? fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final serial = json['serial'];
+    final index = json['sessionIndex'];
+    final signature = json['signature'];
+    final finalHash = json['finalHash'];
+    if (serial is! String || index is! int || signature is! String || finalHash is! String) return null;
+    return DeviceSeal(serial: serial, sessionIndex: index, signatureBase64: signature, finalHashHex: finalHash);
+  }
+}
+
 class FrozenSession {
   const FrozenSession({
     required this.triggerType,
@@ -123,7 +152,11 @@ class FrozenSession {
     required this.endTimeMs,
     required this.recordCount,
     required this.bytes,
+    this.seal,
   });
+
+  /// 단말이 봉인한 기록(BLE 전송)이면 봉인 정보
+  final DeviceSeal? seal;
 
   final TriggerType triggerType;
   final int triggerAtMs;

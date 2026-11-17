@@ -61,6 +61,9 @@ insert into public.devices (id, serial_number, mac_address, vehicle_id, org_id) 
   ('40000000-0000-0000-0000-000000000003', 'PE-2026-000003', 'AA:BB:CC:00:00:03', '30000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000002'),
   ('40000000-0000-0000-0000-000000000004', 'PE-2026-000004', 'AA:BB:CC:00:00:04', null, '10000000-0000-0000-0000-000000000001');
 
+-- PE-2026-000001 에는 BLE 규격 시험 벡터의 시험용 공개키를 넣는다(가짜 단말로 인증 흐름 확인용, 운영 금지)
+update public.devices set auth_public_key = 'BG5x7ngSCHA+azCCZJit+ZdvxKss/CdypW/cv0ASVlY=' where id = '40000000-0000-0000-0000-000000000001';
+
 insert into public.event_sessions (id, device_id, trigger_type, start_time, end_time, record_count, initial_chain_hash, final_chain_hash) values
   ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 'shock',
    '2026-11-10 08:15:00+09', '2026-11-10 08:16:00+09', 3000,

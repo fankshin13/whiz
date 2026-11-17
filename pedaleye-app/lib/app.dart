@@ -8,7 +8,12 @@ import 'core/feedback/warning_feedback.dart';
 import 'core/router/app_router.dart';
 import 'core/sensor/pedal_sensor_source.dart';
 import 'core/theme/app_theme.dart';
+import 'core/ble/ble_transport.dart';
+import 'core/ble/virtual_pedaleye_device.dart';
 import 'features/auth/application/session_controller.dart';
+import 'features/device/application/device_link_controller.dart';
+import 'features/device/application/device_log_sync.dart';
+import 'features/device/data/sensor_mode_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
 import 'features/calibration/data/device_repository.dart';
@@ -29,6 +34,11 @@ class PedalEyeApp extends StatefulWidget {
     required this.events,
     required this.eventSync,
     required this.webConsoleUrl,
+    this.deviceLink,
+    this.sensorMode,
+    this.transportFor,
+    this.deviceLogSync,
+    this.virtualDevice,
   });
 
   final SessionController session;
@@ -41,6 +51,13 @@ class PedalEyeApp extends StatefulWidget {
   final DriverEventsRepository events;
   final EventSyncController eventSync;
   final Uri webConsoleUrl;
+  final DeviceLinkController? deviceLink;
+  final SensorModeStore? sensorMode;
+
+  /// 센서 방식별 BLE 전송(실제 블루투스·가상 단말)
+  final BleTransport Function(SensorMode mode)? transportFor;
+  final DeviceLogSync? deviceLogSync;
+  final VirtualPedalEyeDevice? virtualDevice;
 
   @override
   State<PedalEyeApp> createState() => _PedalEyeAppState();
@@ -54,6 +71,31 @@ class _PedalEyeAppState extends State<PedalEyeApp> {
     super.initState();
     widget.session.addListener(_bindBackups);
     _bindBackups();
+    widget.session.addListener(_bindDeviceLink);
+    widget.sensorMode?.addListener(_onSensorModeChanged);
+    _bindDeviceLink();
+  }
+
+  // 운전자로 로그인했고 BLE·가상 단말 모드일 때만 단말에 연결한다
+  void _bindDeviceLink() {
+    final link = widget.deviceLink;
+    final mode = widget.sensorMode?.mode ?? SensorMode.mock;
+    if (link == null) return;
+    if (widget.session.status == SessionStatus.driver && mode != SensorMode.mock) {
+      link.start();
+    } else {
+      unawaited(link.stop());
+    }
+  }
+
+  Future<void> _onSensorModeChanged() async {
+    final link = widget.deviceLink;
+    final mode = widget.sensorMode?.mode ?? SensorMode.mock;
+    final transportFor = widget.transportFor;
+    if (link != null && transportFor != null && mode != SensorMode.mock) {
+      await link.replaceTransport(transportFor(mode));
+    }
+    _bindDeviceLink();
   }
 
   // 기기 백업·자동 업로드는 로그인한 운전자 기준으로 묶는다(다른 계정이 로그인하면 보이지 않음)
@@ -69,6 +111,8 @@ class _PedalEyeAppState extends State<PedalEyeApp> {
   @override
   void dispose() {
     widget.session.removeListener(_bindBackups);
+    widget.session.removeListener(_bindDeviceLink);
+    widget.sensorMode?.removeListener(_onSensorModeChanged);
     _router.dispose();
     super.dispose();
   }
@@ -86,6 +130,10 @@ class _PedalEyeAppState extends State<PedalEyeApp> {
       events: widget.events,
       eventSync: widget.eventSync,
       webConsoleUrl: widget.webConsoleUrl,
+      deviceLink: widget.deviceLink,
+      sensorMode: widget.sensorMode,
+      deviceLogSync: widget.deviceLogSync,
+      virtualDevice: widget.virtualDevice,
       child: MaterialApp.router(
         title: '페달아이',
         debugShowCheckedModeBanner: false,

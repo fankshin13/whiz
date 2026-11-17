@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app_scope.dart';
+import '../../../core/ble/ble_protocol.dart' show CalibrationValues;
 import '../../../core/calibration/calibration_wizard_state_machine.dart';
+import '../../../core/sensor/ble_pedal_sensor_source.dart';
 import '../../../core/sensor/mock_pedal_sensor_source.dart';
 import '../../../core/sensor/pedal_sensor_source.dart';
 import '../../../core/telemetry/displacement_engine.dart';
@@ -16,6 +18,7 @@ import '../../../core/widgets/busy_button.dart';
 import '../../../core/widgets/form_error.dart';
 import '../../../core/widgets/screen_body.dart';
 import '../../../core/widgets/status_message.dart';
+import '../../device/application/device_link_controller.dart';
 import '../../gauge/presentation/mock_sensor_panel.dart';
 import '../../gauge/presentation/pedal_gauge_widgets.dart';
 import '../data/device_repository.dart';
@@ -194,6 +197,36 @@ class _CalibrationWizardState extends State<_CalibrationWizard> {
   Future<void> _save(CalibrationPayload payload) async {
     setState(() => _saving = true);
     final scope = AppScope.of(context);
+    // BLE 단말이면 먼저 단말에 쓰고, 성공했을 때만 서버에 저장한다(단말·서버 기준값 불일치 방지)
+    if (_source case final BlePedalSensorSource ble) {
+      try {
+        await ble.link.writeCalibration(
+          CalibrationValues(
+            accelMin: payload.accelCalibMin,
+            accelMax: payload.accelCalibMax,
+            brakeMin: payload.brakeCalibMin,
+            brakeMax: payload.brakeCalibMax,
+          ),
+        );
+      } on CalibrationWriteException catch (error) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        final retry = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('단말 저장 실패'),
+            content: Text(error.message),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('닫기')),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('다시 시도')),
+            ],
+          ),
+        );
+        if (retry == true && mounted) await _save(payload);
+        return;
+      }
+      if (!mounted) return;
+    }
     try {
       await scope.devices.saveCalibration(payload);
       if (!mounted) return;

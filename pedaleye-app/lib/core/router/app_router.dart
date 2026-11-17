@@ -9,13 +9,14 @@ import '../../features/auth/presentation/session_screens.dart';
 import '../../features/calibration/presentation/pedal_calibration_screen.dart';
 import '../../features/gauge/presentation/pedal_gauge_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/device/presentation/sensor_settings_screen.dart';
 import '../../features/events/presentation/driver_event_detail_screen.dart';
 import '../../features/events/presentation/driver_event_list_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 
 const _signedOutPaths = {'/login', '/invite'};
 bool _isDriverPath(String path) =>
-    const {'/home', '/calibrate', '/gauge', '/records'}.contains(path) || path.startsWith('/records/');
+    const {'/home', '/calibrate', '/gauge', '/records', '/settings/sensor'}.contains(path) || path.startsWith('/records/');
 
 /// 딥링크 pedaleye://invite?token=… 는 호스트가 'invite' 라 경로로 바꿔 준다.
 /// 웹 초대 주소(…/auth/invite?token=…)를 앱 링크로 받는 경우도 같은 화면으로 보낸다.
@@ -64,6 +65,7 @@ GoRouter createRouter(SessionController session) {
       GoRoute(path: '/connect-error', builder: (context, state) => const RoleCheckFailedScreen()),
       // 주행 중 화면: 탭 바 없이 전체 화면
       GoRoute(path: '/gauge', builder: (context, state) => const PedalGaugeScreen()),
+      GoRoute(path: '/settings/sensor', builder: (context, state) => const SensorSettingsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [

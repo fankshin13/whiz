@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../app_scope.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/status_message.dart';
+import '../../device/application/device_link_controller.dart';
+import '../../device/data/sensor_mode_store.dart';
+import '../../device/presentation/device_log_sync_card.dart';
+import '../../device/presentation/device_status_card.dart';
 import '../data/driver_home_repository.dart';
 import '../domain/driver_home_data.dart';
 
@@ -68,6 +72,16 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.s4),
               children: [
+                if (_deviceLink(context) case final link?) ...[
+                  Text('페달아이 단말', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.s3),
+                  DeviceStatusCard(link: link),
+                  if (AppScope.of(context).deviceLogSync case final sync?) ...[
+                    const SizedBox(height: AppSpacing.s3),
+                    DeviceLogSyncCard(sync: sync),
+                  ],
+                  const SizedBox(height: AppSpacing.s6),
+                ],
                 Text('배정 차량', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.s3),
                 if (loading)
@@ -92,12 +106,31 @@ class _HomeScreenState extends State<HomeScreen> {
                       actions: [OutlinedButton(onPressed: _reload, child: const Text('새로고침'))],
                     ),
                   ),
+                if (AppScope.of(context).sensorMode != null) ...[
+                  const SizedBox(height: AppSpacing.s6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/settings/sensor'),
+                      icon: const Icon(Icons.tune),
+                      label: const Text('센서 설정(개발용)'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  /// BLE·가상 단말 모드일 때만 단말 상태를 보여 준다
+  DeviceLinkController? _deviceLink(BuildContext context) {
+    final scope = AppScope.of(context);
+    final mode = scope.sensorMode;
+    if (scope.deviceLink == null || mode == null || mode.mode == SensorMode.mock) return null;
+    return scope.deviceLink;
   }
 
   Future<void> _confirmSignOut(BuildContext context) async {

@@ -61,6 +61,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       <section aria-label="무결성 요약" className="card grid gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <IntegrityBadge verification={verification} />
+          {data.deviceSealed === "verified" ? (
+            <span className="rounded-md border border-good bg-good-bg px-2 text-caption font-semibold text-good">단말 봉인 서명 확인</span>
+          ) : data.deviceSealed === "invalid" ? (
+            <span className="rounded-md border border-critical bg-critical-bg px-2 text-caption font-semibold text-critical">단말 봉인 서명 불일치</span>
+          ) : (
+            <span className="rounded-md border border-border-strong px-2 text-caption font-medium text-text-muted">단말 봉인 없음(앱 생성 기록)</span>
+          )}
           <span className="text-caption text-text-muted">전수 검증 {verification.verificationDurationMs}ms · SHA-256(FIPS 180-4)</span>
         </div>
         <dl className="m-0 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

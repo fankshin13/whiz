@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -37,7 +39,7 @@ class SupabaseDeviceRepository implements DeviceRepository {
       final row = await _client
           .from('devices')
           .select(
-            'id, serial_number, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max, '
+            'id, serial_number, auth_public_key, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max, '
             'vehicle:vehicles!inner(plate_number, assigned_user_id)',
           )
           .eq('vehicle.assigned_user_id', userId)
@@ -64,6 +66,18 @@ class SupabaseDeviceRepository implements DeviceRepository {
       throw const DeviceLoadException();
     }
     final [accelMin, accelMax, brakeMin, brakeMax] = values.cast<int>();
+    final rawKey = row['auth_public_key'];
+    Uint8List? authKey;
+    if (rawKey is String) {
+      try {
+        authKey = base64Decode(rawKey);
+      } on FormatException {
+        throw const DeviceLoadException();
+      }
+      if (authKey.length != 32) throw const DeviceLoadException();
+    } else if (rawKey != null) {
+      throw const DeviceLoadException();
+    }
     return DriverDevice(
       deviceId: id,
       serialNumber: serial,
@@ -74,6 +88,7 @@ class SupabaseDeviceRepository implements DeviceRepository {
         brakeCalibMin: brakeMin,
         brakeCalibMax: brakeMax,
       ),
+      authPublicKey: authKey,
     );
   }
 

@@ -4,6 +4,7 @@ import type { CurrentUser } from "@/lib/auth/get-current-user";
 import { EVENT_LOG_BUCKET } from "@/lib/events/upload";
 import { parseAllPackets, verifyLogFileIntegrity } from "@/lib/forensics/integrity-engine";
 import type { Database } from "@/lib/supabase/database.types";
+import { genesisSubject } from "@/lib/events/device-seal";
 import { computeGenesisHash, toHex } from "@/lib/telemetry/hash-chain-engine";
 import { decodePacketRecord } from "@/lib/telemetry/packet-codec";
 import type { SessionForensicData } from "@/types/forensics";
@@ -37,7 +38,7 @@ export async function loadSessionForensics(
   const { data: session, error } = await userClient
     .from("event_sessions")
     .select(
-      "id, device_id, trigger_type, start_time, end_time, integrity_verified, raw_log_storage_path, device:devices!inner(serial_number, vehicle:vehicles!inner(plate_number, org_id, assigned_user_id))",
+      "id, device_id, trigger_type, start_time, end_time, integrity_verified, raw_log_storage_path, device_seal_signature, device_seal_verified, device:devices!inner(serial_number, vehicle:vehicles!inner(plate_number, org_id, assigned_user_id))",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -66,8 +67,13 @@ export async function loadSessionForensics(
   const bytes = new Uint8Array(await download.data.arrayBuffer());
 
   let genesis: string | undefined;
-  if (bytes.length >= 64) genesis = toHex(await computeGenesisHash(session.device_id, decodePacketRecord(bytes, 0).timestampMs));
-  const verification = await verifyLogFileIntegrity(bytes, genesis);
+  // 단말이 봉인한 기록은 일련번호, 앱이 만든 기록은 단말 ID 로 체인 시작값을 계산한다
+  const sealed = session.device_seal_signature !== null;
+  const subject = genesisSubject({ deviceId: session.device_id, serial: session.device.serial_number, sealed });
+  if (bytes.length >= 64) genesis = toHex(await computeGenesisHash(subject, decodePacketRecord(bytes, 0).timestampMs));
+  const chain = await verifyLogFileIntegrity(bytes, genesis);
+  // 봉인 서명은 업로드 때 등록 공개키로 확인한 결과를 쓴다(이후 키 교체와 무관). 봉인이 틀린 기록은 통과로 보지 않는다
+  const verification = sealed && !session.device_seal_verified && chain.isValid ? { ...chain, isValid: false } : chain;
 
   if (syncWith && verification.isValid !== session.integrity_verified) {
     const { error: updateError } = await syncWith
@@ -92,6 +98,7 @@ export async function loadSessionForensics(
       startTime: session.start_time,
       endTime: session.end_time,
       verification,
+      deviceSealed: sealed ? (session.device_seal_verified ? "verified" : "invalid") : "none",
       packets: await parseAllPackets(bytes),
     },
   };

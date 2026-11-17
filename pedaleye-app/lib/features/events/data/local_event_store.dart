@@ -46,6 +46,7 @@ class LocalEventStore implements EventBackupStore {
       recordCount: session.recordCount,
       status: UploadStatus.pending,
       createdAtMs: DateTime.now().millisecondsSinceEpoch,
+      seal: session.seal,
     );
     await update(userId, backup);
     return backup;
