@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { bindDeviceToVehicle, upsertVehicle } from "@/lib/vehicles/operations";
+import { mountDevice } from "@/lib/devices/operations";
+import { upsertVehicle } from "@/lib/vehicles/operations";
 
-import { ORG, USER, VEHICLE, signedInClient } from "./helpers";
+import { DEVICE, ORG, USER, VEHICLE, signedInClient } from "./helpers";
 
 const hwaseongAdmin = { role: "org_admin", orgId: ORG.hwaseong } as const;
 
-describe("upsertVehicle / bindDeviceToVehicle", () => {
+describe("upsertVehicle / mountDevice", () => {
   it("org_admin 이 만든 차량은 요청과 무관하게 본인 조직에 들어가고, 재고 단말을 장착할 수 있다", async () => {
     const supabase = await signedInClient("admin.hwaseong@pedaleye.test");
 
@@ -21,17 +22,11 @@ describe("upsertVehicle / bindDeviceToVehicle", () => {
     expect(created.data.org_id).toBe(ORG.hwaseong);
 
     try {
-      const bound = await bindDeviceToVehicle(supabase, hwaseongAdmin, {
-        serial_number: "PE-2026-000004",
-        vehicle_id: created.data.id,
-      });
-      expect(bound).toMatchObject({ ok: true, data: { vehicle_id: created.data.id } });
+      const bound = await mountDevice(supabase, hwaseongAdmin, { deviceId: DEVICE.inventory, vehicleId: created.data.id });
+      expect(bound).toEqual({ ok: true, data: { deviceId: DEVICE.inventory, replacedSerial: null } });
 
-      const busy = await bindDeviceToVehicle(supabase, hwaseongAdmin, {
-        serial_number: "PE-2026-000001",
-        vehicle_id: created.data.id,
-      });
-      expect(busy).toEqual({ ok: false, error: "이미 다른 차량에 장착된 단말입니다." });
+      const busy = await mountDevice(supabase, hwaseongAdmin, { deviceId: DEVICE.driverA, vehicleId: created.data.id, replace: true });
+      expect(busy).toEqual({ ok: false, error: "이미 다른 차량에 장착된 단말입니다. 먼저 장착을 해제해 주세요." });
     } finally {
       // 차량 삭제 시 단말은 vehicle_id = null(재고)로 돌아간다
       const { error } = await supabase.from("vehicles").delete().eq("id", created.data.id);
@@ -49,10 +44,7 @@ describe("upsertVehicle / bindDeviceToVehicle", () => {
     });
     expect(crossAssign).toEqual({ ok: false, error: "배정 운전자는 같은 조직 소속이어야 합니다." });
 
-    const crossBind = await bindDeviceToVehicle(supabase, hwaseongAdmin, {
-      serial_number: "PE-2026-000004",
-      vehicle_id: VEHICLE.driverC,
-    });
+    const crossBind = await mountDevice(supabase, hwaseongAdmin, { deviceId: DEVICE.inventory, vehicleId: VEHICLE.driverC });
     expect(crossBind).toEqual({ ok: false, error: "차량을 찾을 수 없거나 관리 권한이 없습니다." });
   });
 

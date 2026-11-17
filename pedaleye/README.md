@@ -69,7 +69,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
 1. supabase.com 에서 새 프로젝트를 만든다(리전 Seoul `ap-northeast-2` 권장).
 2. 마이그레이션 적용 — 둘 중 하나:
    - CLI: `pnpm exec supabase link --project-ref <ref>` 후 `pnpm exec supabase db push` (시드는 넣지 않는다)
-   - 대시보드 SQL Editor: `supabase/migrations/` 의 7개 파일을 번호 순서대로 실행
+   - 대시보드 SQL Editor: `supabase/migrations/` 의 모든 파일을 번호 순서대로 실행
 3. Authentication 설정
    - URL Configuration → Site URL = 서비스 주소(`APP_BASE_URL`)
    - Email → 최소 비밀번호 길이 8
@@ -77,7 +77,11 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
 4. 점검: SQL Editor 에서 `supabase/audit/production-audit.sql` 실행 → 모든 행의 `ok` 가 `true` 인지 확인
 5. 첫 슈퍼 관리자: Authentication → Users → Add user 로 계정을 만든 뒤 SQL Editor 에서
    `update public.users set role = 'super_admin' where email = '<이메일>';`
-   조직은 `insert into public.organizations (name, type) values ('<조직명>', 'b2g');` 로 만든다.
+   이후 조직은 웹 **조직 관리**(`/admin/organizations`)에서 만들고, 조직마다 **관리자 초대**로 조직 관리자(org_admin)를 1회용 링크로 붙인다.
+   조직 관리자 초대는 슈퍼 관리자만 만들 수 있다(DB 정책 `invitations_insert` 가 한 번 더 막음). 조직 관리자는 자기 조직의 운전자만 초대한다.
+   단말은 웹 **단말 관리**(`/devices`)에서 슈퍼 관리자가 조직을 정해 재고로 등록하고, 조직 관리자가 자기 조직 차량에 장착·교체·해제한다.
+   재고는 조직별이다(다른 조직 재고는 보이지 않음). 교체·해제된 단말은 그 조직 재고로 돌아가고, 새로 장착한 단말은 보정값이 공장 기본값으로 초기화되어 '보정 필요'로 표시된다.
+   장착·교체는 DB 함수 `mount_device` 가 권한 확인과 함께 한 번에 처리한다. 점검 SQL 의 `devices_without_org` 가 `false` 면 조직이 정해지지 않은 기존 단말이 있다는 뜻이다(슈퍼 관리자만 보이며, 장착하면 그 차량 조직으로 정해짐).
 
 ### 2. Vercel
 1. 새 프로젝트, Root Directory = `pedaleye`, Framework = Next.js (`vercel.json` 이 서울 리전 `icn1`·pnpm 을 지정)

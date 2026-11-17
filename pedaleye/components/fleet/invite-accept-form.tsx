@@ -64,7 +64,7 @@ export function InviteAcceptForm({ token }: { token: string }) {
         {pending ? (
           <>
             <span className="spinner" aria-hidden="true" />
-            운전자 계정 등록 및 세션 생성 중...
+            계정 등록 및 세션 생성 중...
           </>
         ) : (
           "등록 완료 및 대시보드 시작"

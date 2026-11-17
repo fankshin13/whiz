@@ -17,6 +17,7 @@ const ROUTE_ACCESS: ReadonlyArray<{ pattern: RegExp; roles: readonly UserRole[] 
   // 운전자는 본인 배정 차량 세션만(RLS 와 loadSessionForensics 가 범위를 제한)
   { pattern: /^\/events(\/|$)/, roles: ["super_admin", "org_admin", "investigator", "driver"] },
   { pattern: /^\/devices\/calibrate(\/|$)/, roles: ["super_admin", "org_admin", "driver"] },
+  { pattern: /^\/devices\/?$/, roles: ["super_admin", "org_admin"] },
   { pattern: /^\/admin(\/|$)/, roles: ["super_admin"] },
 ];
 
