@@ -84,6 +84,8 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
    장착·교체는 DB 함수 `mount_device` 가 권한 확인과 함께 한 번에 처리한다. 점검 SQL 의 `devices_without_org` 가 `false` 면 조직이 정해지지 않은 기존 단말이 있다는 뜻이다(슈퍼 관리자만 보이며, 장착하면 그 차량 조직으로 정해짐).
    관리 작업(조직·차량·단말·초대·사용자 변경)과 사고 보고서 열람·인쇄는 감사 로그(`public.audit_logs`)에 자동으로 남고 웹 **감사 로그**(`/admin/audit`)에서 조회·CSV 내보내기를 한다(슈퍼 관리자 전체, 조직 관리자 자기 조직).
    감사 로그는 추가만 되며 서비스 키로도 수정·삭제할 수 없다(트리거). 요청 IP 는 웹 서버가 `x-pedaleye-client-ip` 로 넘긴 값(Vercel 의 접속자 IP)이다.
+   퇴사·담당 변경은 웹 **사용자 관리**(`/users`)에서 계정을 비활성화한다(삭제 없음, 재활성화 가능). DB 함수 `set_user_active` 가 상태 변경·차량 배정 해제·로그인 차단(`auth.users.banned_until`)·세션 폐기·감사 기록을 한 번에 처리하고, 비활성 계정은 권한 함수가 null 을 돌려 이미 받은 토큰으로도 데이터를 못 본다.
+   **배포 순서**: 마이그레이션 012 를 먼저 적용한 뒤 새 앱을 배포한다(앱이 `users.is_active` 를 읽음).
 
 ### 2. Vercel
 1. 새 프로젝트, Root Directory = `pedaleye`, Framework = Next.js (`vercel.json` 이 서울 리전 `icn1`·pnpm 을 지정)

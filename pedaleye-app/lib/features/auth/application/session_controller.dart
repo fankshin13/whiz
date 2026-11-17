@@ -30,6 +30,14 @@ class SessionController extends ChangeNotifier {
   bool _evaluated = false;
 
   SessionStatus get status => _status;
+
+  /// 비활성화된 계정이라 로그아웃시켰음(로그인 화면이 한 번 안내하고 지움)
+  bool _accountDeactivated = false;
+  bool takeAccountDeactivated() {
+    final value = _accountDeactivated;
+    _accountDeactivated = false;
+    return value;
+  }
   String? get userId => _userId;
 
   Future<void> start() async {
@@ -57,6 +65,11 @@ class SessionController extends ChangeNotifier {
     } on RoleLookupException {
       if (generation != _generation) return;
       _set(SessionStatus.roleCheckFailed);
+    } on AccountDeactivatedException {
+      if (generation != _generation) return;
+      _accountDeactivated = true;
+      await _auth.signOut();
+      if (generation == _generation) _set(SessionStatus.signedOut);
     }
   }
 

@@ -38,6 +38,7 @@ class FakeAuthRepository implements AuthRepository {
   final _changes = StreamController<String?>.broadcast();
   SignInFailure? nextSignInFailure;
   bool roleLookupFails = false;
+  bool deactivated = false;
   int roleLookups = 0;
   int signOuts = 0;
 
@@ -68,6 +69,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<UserRole> fetchRole(String userId) async {
     roleLookups += 1;
     if (roleLookupFails) throw const RoleLookupException();
+    if (deactivated) throw const AccountDeactivatedException();
     return accounts.values.firstWhere((a) => a.$2 == userId).$3;
   }
 }

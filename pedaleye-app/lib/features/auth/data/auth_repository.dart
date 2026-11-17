@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/user_role.dart';
 
-enum SignInFailure { invalidCredentials, network, unknown }
+enum SignInFailure { invalidCredentials, deactivated, network, unknown }
 
 class SignInException implements Exception {
   const SignInException(this.failure);
@@ -15,6 +15,11 @@ class SignInException implements Exception {
 /// 역할을 조회하지 못했을 때(오프라인 등). 역할을 모르면 앱 기능을 열지 않는다.
 class RoleLookupException implements Exception {
   const RoleLookupException();
+}
+
+/// 관리자가 비활성화한 계정. 세션이 남아 있어도 앱 기능을 열지 않고 로그아웃한다.
+class AccountDeactivatedException implements Exception {
+  const AccountDeactivatedException();
 }
 
 /// 인증과 역할 조회. 화면·상태 관리 코드는 Supabase 를 직접 모르도록 이 인터페이스만 쓴다.
@@ -28,7 +33,8 @@ abstract interface class AuthRepository {
 
   Future<void> signOut();
 
-  /// public.users 에서 본인 역할을 읽는다(RLS: 본인 행만 보임)
+  /// public.users 에서 본인 역할을 읽는다(RLS: 본인 행만 보임).
+  /// 비활성화된 계정이면 [AccountDeactivatedException].
   Future<UserRole> fetchRole(String userId);
 }
 
@@ -49,6 +55,8 @@ class SupabaseAuthRepository implements AuthRepository {
     } on AuthRetryableFetchException {
       throw const SignInException(SignInFailure.network);
     } on AuthApiException catch (error) {
+      // 비밀번호가 맞을 때만 오는 코드라 계정 존재 여부가 새지 않는다
+      if (error.code == 'user_banned') throw const SignInException(SignInFailure.deactivated);
       if (error.code == 'invalid_credentials' || error.statusCode == '400') {
         throw const SignInException(SignInFailure.invalidCredentials);
       }
@@ -66,7 +74,8 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<UserRole> fetchRole(String userId) async {
     try {
-      final row = await _client.from('users').select('role').eq('id', userId).maybeSingle();
+      final row = await _client.from('users').select('role, is_active').eq('id', userId).maybeSingle();
+      if (row?['is_active'] == false) throw const AccountDeactivatedException();
       final role = UserRole.fromDb(row?['role']);
       if (role == null) throw const RoleLookupException();
       return role;

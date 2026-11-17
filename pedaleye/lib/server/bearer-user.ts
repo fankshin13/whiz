@@ -30,11 +30,12 @@ export async function getBearerUser(request: Request) {
 
   const { data: profile, error: profileError } = await client
     .from("users")
-    .select("id, email, name, role, org_id")
+    .select("id, email, name, role, org_id, is_active")
     .eq("id", data.user.id)
     .maybeSingle();
   if (profileError) throw new Error(`사용자 프로필 조회 실패 (${profileError.code})`);
-  if (!profile) return null;
+  // 비활성화된 계정은 토큰이 아직 유효해도 거부한다
+  if (!profile || !profile.is_active) return null;
 
   const user: CurrentUser = {
     id: profile.id,

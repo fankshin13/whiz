@@ -137,17 +137,23 @@ isOneToOne: false
                   ]
                 },"users": {
                   Row: {
-                    "created_at": string,"email": string,"id": string,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
+                    "created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"id": string,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"id"?: string,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "users_deactivated_by_fkey"
+      columns: ["deactivated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "users_org_id_fkey"
       columns: ["org_id"]
 isOneToOne: false
@@ -195,6 +201,14 @@ isOneToOne: false
                            },
 "mount_device":
 { Args: { "p_device_id": string,"p_replace"?: boolean,"p_vehicle_id": string }; Returns: Json
+                           },
+"set_user_active":
+{ Args: { "p_active": boolean,"p_demote"?: boolean,"p_reason"?: string,"p_unassign_vehicle"?: boolean,"p_user_id": string }; Returns: Json
+                           },
+"user_last_sign_in":
+{ Args: { "p_user_ids": (string)[] }; Returns: {
+              "id": string,"last_sign_in_at": string
+            }[]
                            }
           }
           Enums: {

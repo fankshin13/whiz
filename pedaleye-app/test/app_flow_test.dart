@@ -55,6 +55,19 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, '로그인'));
         await tester.pumpAndSettle();
         expect(find.text(keepAll(networkErrorMessage)), findsOneWidget);
+
+        auth.nextSignInFailure = SignInFailure.deactivated;
+        await tester.tap(find.widgetWithText(FilledButton, '로그인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(deactivatedMessage)), findsOneWidget);
+      });
+
+      testWidgets('비활성화된 계정의 남은 세션은 로그인 화면으로 돌아가 안내한다', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        final auth = fakeAuth(signedInAs: driverId)..deactivated = true;
+        await pumpApp(tester, auth: auth);
+        expect(find.byType(HomeScreen), findsNothing);
+        expect(find.text(keepAll(deactivatedMessage)), findsOneWidget);
       });
 
       testWidgets('관리자 로그인은 운전자 전용 안내로 격리되고 홈 데이터를 읽지 않는다', (tester) async {
