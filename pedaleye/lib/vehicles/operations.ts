@@ -106,3 +106,55 @@ export async function unassignDriver(supabase: Client, user: Operator, vehicleId
   if (data.length === 0) return { ok: false, error: "차량을 찾을 수 없거나 관리 권한이 없습니다." };
   return { ok: true, data: null };
 }
+
+const ASSIGN_ERRORS: Record<string, string> = {
+  FORBIDDEN: NO_PERMISSION,
+  VEHICLE_NOT_FOUND: "차량을 찾을 수 없거나 관리 권한이 없습니다.",
+  VEHICLE_ASSIGNED: "이미 운전자가 배정된 차량입니다. 먼저 배정을 해제해 주세요.",
+  DRIVER_NOT_ELIGIBLE: "배정할 수 없는 사용자입니다. 같은 조직의 활성 운전자만 배정할 수 있습니다.",
+  DRIVER_ASSIGNED: "이 운전자는 이미 다른 차량에 배정되어 있습니다. 그 차량의 배정을 먼저 해제해 주세요.",
+  PENDING_INVITATION: "이 차량에 대기 중인 초대가 있습니다. 초대를 먼저 취소해 주세요.",
+};
+
+/**
+ * 이미 가입된 운전자를 차량에 배정(결정 2026-11-17: 같은 조직의 미배정 활성 운전자만).
+ * 권한·조건·감사 기록(사유 포함)은 DB 함수 assign_driver 가 한 트랜잭션으로 처리한다.
+ */
+export async function assignDriver(
+  supabase: Client,
+  user: Operator,
+  input: { vehicleId: unknown; userId: unknown; reason?: unknown },
+): Promise<OperationResult<null>> {
+  if (!canManageVehicles(user)) return { ok: false, error: NO_PERMISSION };
+  const parsed = z
+    .object({ vehicleId: z.guid(), userId: z.guid({ error: "배정할 운전자를 선택해 주세요." }), reason: z.string().trim().max(200).optional() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
+
+  const { error } = await supabase.rpc("assign_driver", {
+    p_vehicle_id: parsed.data.vehicleId,
+    p_user_id: parsed.data.userId,
+    p_reason: parsed.data.reason || undefined,
+  });
+  if (error) {
+    const known = ASSIGN_ERRORS[error.message];
+    if (known) return { ok: false, error: known };
+    if (error.code === "23505") return { ok: false, error: ASSIGN_ERRORS.DRIVER_ASSIGNED ?? TEMPORARY_FAILURE };
+    if (error.code === "42501") return { ok: false, error: NO_PERMISSION };
+    console.error("assignDriver failed", { code: error.code });
+    return { ok: false, error: TEMPORARY_FAILURE };
+  }
+  return { ok: true, data: null };
+}
+
+/** 차량에 배정할 수 있는 운전자: 차량과 같은 조직의 활성 운전자 중 배정 차량이 없는 사람 */
+export async function listAssignableDrivers(supabase: Client, vehicleOrgId: string): Promise<{ id: string; name: string; email: string }[]> {
+  const [drivers, assigned] = await Promise.all([
+    supabase.from("users").select("id, name, email").eq("org_id", vehicleOrgId).eq("role", "driver").eq("is_active", true).order("name"),
+    supabase.from("vehicles").select("assigned_user_id").not("assigned_user_id", "is", null),
+  ]);
+  if (drivers.error) throw new Error(`운전자 조회 실패 (${drivers.error.code})`);
+  if (assigned.error) throw new Error(`배정 현황 조회 실패 (${assigned.error.code})`);
+  const taken = new Set(assigned.data.map((v) => v.assigned_user_id));
+  return drivers.data.filter((d) => !taken.has(d.id));
+}

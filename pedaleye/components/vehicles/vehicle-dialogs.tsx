@@ -1,11 +1,13 @@
 "use client";
 
-import { Pencil, Plus, UserMinus } from "lucide-react";
+import { Pencil, Plus, UserCheck, UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ModalDialog } from "@/components/page/modal-dialog";
 import {
+  assignDriverAction,
+  type AssignState,
   saveVehicleAction,
   unassignDriverAction,
   type UnassignState,
@@ -241,5 +243,99 @@ export function UnassignDriverDialog({ vehicleId, driverName }: { vehicleId: str
         </form>
       </ModalDialog>
     </>
+  );
+}
+
+const initialAssignState: AssignState = { ok: null };
+
+/**
+ * 이미 가입된 운전자를 차량에 배정(같은 조직의 미배정 활성 운전자만).
+ * 배정하면 그 운전자가 이 차량의 과거 사고 기록도 볼 수 있게 되므로 안내하고, 사유는 감사 로그에 남긴다.
+ */
+export function AssignDriverDialog({
+  vehicleId,
+  plateNumber,
+  drivers,
+}: {
+  vehicleId: string;
+  plateNumber: string;
+  drivers: { id: string; name: string; email: string }[];
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [formKey, setFormKey] = useState(0);
+  const id = `assign-${vehicleId}`;
+  return (
+    <>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        aria-haspopup="dialog"
+        onClick={() => {
+          setFormKey((k) => k + 1);
+          dialogRef.current?.showModal();
+        }}
+      >
+        <UserCheck aria-hidden="true" size={18} />
+        기존 운전자 배정
+      </button>
+      <ModalDialog id={id} dialogRef={dialogRef} title="기존 운전자 배정" description={`${plateNumber} 차량에 이미 가입한 운전자를 배정합니다.`}>
+        <AssignForm key={formKey} id={id} vehicleId={vehicleId} drivers={drivers} close={() => dialogRef.current?.close()} />
+      </ModalDialog>
+    </>
+  );
+}
+
+function AssignForm({ id, vehicleId, drivers, close }: { id: string; vehicleId: string; drivers: { id: string; name: string; email: string }[]; close: () => void }) {
+  const [state, formAction, pending] = useActionState(assignDriverAction, initialAssignState);
+  if (drivers.length === 0) {
+    return (
+      <p className="m-0 text-text-muted">
+        배정할 수 있는 운전자가 없습니다. 같은 조직의 운전자가 모두 다른 차량에 배정되어 있거나 비활성 상태입니다. 새 운전자는 &lsquo;운전자 초대&rsquo;로 가입시켜 주세요.
+      </p>
+    );
+  }
+  return (
+    <form action={formAction} className="grid gap-4" aria-busy={pending}>
+      <input type="hidden" name="vehicleId" value={vehicleId} />
+      <div className="grid gap-1">
+        <label htmlFor={`${id}-driver`} className="font-semibold">
+          운전자
+        </label>
+        <select id={`${id}-driver`} name="userId" className="input" required defaultValue="" disabled={pending}>
+          <option value="" disabled>
+            운전자를 선택해 주세요
+          </option>
+          {drivers.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name} · {d.email}
+            </option>
+          ))}
+        </select>
+        <span className="text-caption text-text-muted">같은 조직의 활성 운전자 중 배정 차량이 없는 사람만 보입니다.</span>
+      </div>
+      <p className="alert m-0">배정하면 이 운전자가 앱과 웹에서 이 차량의 과거 주행·사고 기록도 볼 수 있게 됩니다.</p>
+      <div className="grid gap-1">
+        <label htmlFor={`${id}-reason`} className="font-semibold">
+          사유 <span className="font-normal text-text-muted">(선택, 감사 로그에 기록)</span>
+        </label>
+        <input id={`${id}-reason`} name="reason" className="input" maxLength={200} placeholder="예: 담당 차량 변경, 재입사" disabled={pending} />
+      </div>
+      <div aria-live="polite">
+        {state.ok === false ? (
+          <p className="alert m-0" role="alert">
+            {state.error}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className="btn" disabled={pending}>
+          {pending ? <span className="spinner" aria-hidden="true" /> : <UserCheck aria-hidden="true" size={18} />}
+          {pending ? "배정 중..." : "배정"}
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={close} disabled={pending}>
+          취소
+        </button>
+      </div>
+    </form>
   );
 }
