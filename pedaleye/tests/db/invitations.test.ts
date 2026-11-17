@@ -107,6 +107,7 @@ describe("초대 조회·수락", () => {
       inviteeName: "운전자 accept",
       orgName: "화성시 교통안전과",
       vehiclePlate: "56다 1004",
+      role: "driver",
     });
 
     const accepted = await acceptInvitation(admin, { token: invite.token, password: PASSWORD, passwordConfirm: PASSWORD });

@@ -6,7 +6,8 @@ with expected_tables(name) as (
 ),
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
-         ('20261115000005'), ('20261115000006'), ('20261115000007')
+         ('20261115000005'), ('20261115000006'), ('20261115000007'),
+         ('20261117000008')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -44,6 +45,12 @@ select 'accept_invitation_service_role_only',
        has_function_privilege('service_role', 'public.accept_invitation(text, uuid)', 'EXECUTE')
        and not has_function_privilege('authenticated', 'public.accept_invitation(text, uuid)', 'EXECUTE')
        and not has_function_privilege('anon', 'public.accept_invitation(text, uuid)', 'EXECUTE'),
+       ''
+union all
+select 'org_admin_invitations_super_admin_only',
+       exists (select 1 from pg_policy
+               where polname = 'invitations_insert'
+                 and pg_get_expr(polwithcheck, polrelid) like '%role = ''driver''%'),
        ''
 union all
 select 'database_timezone_asia_seoul',

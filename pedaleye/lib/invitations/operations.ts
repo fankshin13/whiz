@@ -102,12 +102,80 @@ export async function createInvitation(
   };
 }
 
+// ── 조직 관리자 초대(슈퍼 관리자 전용) ───────────────────────────────────
+
+export const createOrgAdminInvitationSchema = z.object({
+  orgId: z.guid("조직을 찾을 수 없습니다."),
+  name: z.string().trim().min(1, "관리자 이름을 입력해 주세요.").max(50),
+  email: z.email("이메일 형식을 확인해 주세요.").transform((value) => value.toLowerCase()),
+  expiresInHours: z.coerce.number().int().min(1).max(168).default(24),
+});
+
+/**
+ * 조직 관리자(org_admin) 1회용 초대 링크. 차량은 붙이지 않는다.
+ * 서버에서 슈퍼 관리자인지 확인하고, RLS(invitations_insert)가 한 번 더 막는다.
+ */
+export async function createOrgAdminInvitation(
+  supabase: Client,
+  user: Operator,
+  input: unknown,
+  baseUrl: string,
+): Promise<CreateInvitationResult> {
+  if (user.role !== "super_admin") return { ok: false, error: "조직 관리자를 초대할 권한이 없습니다." };
+
+  const parsed = createOrgAdminInvitationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
+  }
+  const { orgId, name, email, expiresInHours } = parsed.data;
+
+  const [org, existingUser, active] = await Promise.all([
+    supabase.from("organizations").select("id").eq("id", orgId).maybeSingle(),
+    supabase.from("users").select("id").eq("email", email).maybeSingle(),
+    supabase
+      .from("invitations")
+      .select("id")
+      .eq("email", email)
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString()),
+  ]);
+  for (const failed of [org.error, existingUser.error, active.error]) {
+    if (failed) {
+      console.error("createOrgAdminInvitation lookup failed", { code: failed.code });
+      return { ok: false, error: TEMPORARY_FAILURE };
+    }
+  }
+  if (!org.data) return { ok: false, error: "조직을 찾을 수 없습니다." };
+  if (existingUser.data) return { ok: false, error: "이미 가입된 이메일입니다. 다른 이메일로 초대해 주세요." };
+  if ((active.data ?? []).length > 0) return { ok: false, error: "이미 해당 이메일로 활성화된 초대가 존재합니다." };
+
+  const token = generateInvitationToken();
+  const expiresAt = new Date(Date.now() + expiresInHours * 3_600_000).toISOString();
+  const { error: insertError } = await supabase.from("invitations").insert({
+    org_id: orgId,
+    vehicle_id: null,
+    email,
+    invitee_name: name,
+    role: "org_admin",
+    token_hash: hashInvitationToken(token),
+    expires_at: expiresAt,
+    created_by: user.id,
+  });
+  if (insertError) {
+    if (insertError.code === "42501") return { ok: false, error: "조직 관리자를 초대할 권한이 없습니다." };
+    console.error("createOrgAdminInvitation insert failed", { code: insertError.code });
+    return { ok: false, error: TEMPORARY_FAILURE };
+  }
+
+  return { ok: true, invitationUrl: `${baseUrl}/auth/invite?token=${token}`, expiresAt, expiresInHours };
+}
+
 // ── 초대 조회(토큰 검증) ─────────────────────────────────────────────────
 
 export type InvitationFailure = "NOT_FOUND" | "ALREADY_USED" | "EXPIRED";
 
 export type InvitationLookup =
-  | { valid: true; email: string; inviteeName: string; orgName: string; vehiclePlate: string | null }
+  | { valid: true; email: string; inviteeName: string; orgName: string; vehiclePlate: string | null; role: UserRole }
   | { valid: false; reason: InvitationFailure };
 
 /** 토큰으로 초대를 찾는다. service_role 클라이언트 전용(토큰 자체가 인가 수단). 내부 ID·해시는 돌려주지 않는다. */
@@ -116,7 +184,7 @@ export async function lookupInvitation(admin: Client, rawToken: string): Promise
 
   const { data, error } = await admin
     .from("invitations")
-    .select("email, invitee_name, expires_at, used_at, organizations(name), vehicles(plate_number)")
+    .select("email, invitee_name, role, expires_at, used_at, organizations(name), vehicles(plate_number)")
     .eq("token_hash", hashInvitationToken(rawToken))
     .maybeSingle();
   if (error) throw new Error(`초대 조회 실패 (${error.code})`);
@@ -131,6 +199,7 @@ export async function lookupInvitation(admin: Client, rawToken: string): Promise
     inviteeName: data.invitee_name,
     orgName: data.organizations?.name ?? "",
     vehiclePlate: data.vehicles?.plate_number ?? null,
+    role: data.role,
   };
 }
 
