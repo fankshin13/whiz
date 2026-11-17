@@ -28,8 +28,18 @@
 규칙을 바꿀 때는 웹과 앱을 함께 고치고 양쪽 테스트를 모두 돌려 주세요.
 
 ## 센서 입력
-화면은 `PedalSensorSource` 인터페이스만 씁니다. 지금은 `MockPedalSensorSource`(모의 센서: 직접 조작·정상 주행·급가속·급제동·양발 조작·신호 끊김)를
-`main.dart` 에서 넣고, 단말 통신 규격이 정해지면 BLE 구현을 같은 자리에 넣습니다. 모의 센서 조작판은 모의 센서일 때만 보입니다.
+화면은 `PedalSensorSource` 인터페이스만 씁니다. 센서는 홈 화면 아래 **센서 설정(개발용)**에서 고르며 앱을 다시 켜도 유지됩니다.
+
+| 방식 | 내용 |
+| --- | --- |
+| 모의 센서(기본) | `MockPedalSensorSource`: 직접 조작·정상 주행·급가속·급제동·양발 조작·신호 끊김. 조작판은 이때만 보임 |
+| BLE 단말 | `docs/ble-protocol.md` 규격. 배정 단말(일련번호 일치)만 연결 → MTU 247 → 규격 버전 → 단말 서명 확인(서버에 등록된 Ed25519 공개키) → 20Hz 실시간 알림. 끊기면 1·2·4·8·10초 간격 재연결, 인증 실패는 자동 재시도 안 함 |
+| 가상 단말(개발용) | 블루투스 없이 규격대로 동작하는 `VirtualPedalEyeDevice`. 시험 벡터 키로 서명하므로 로컬 시드의 `PE-2026-000001`(시험 공개키 등록)과 짝이 맞음 |
+
+- 연결·인증 상태 기계: `lib/features/device/application/device_link_controller.dart`, 블루투스: `lib/core/ble/flutter_blue_transport.dart`(flutter_blue_plus)
+- 공개키가 없는 단말(인증 미설정)은 홈에서 경고 후 운전자가 동의할 때만 연결합니다.
+- 보정 결과는 BLE 단말에 먼저 쓰고 성공해야 서버에 저장합니다(단말·서버 기준값 불일치 방지).
+- 권한: Android 12+ 근처 기기(BLUETOOTH_SCAN `neverForLocation`·BLUETOOTH_CONNECT), 11 이하 위치 권한.
 
 ## 실행
 

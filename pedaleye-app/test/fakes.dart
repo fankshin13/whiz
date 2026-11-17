@@ -10,6 +10,9 @@ import 'package:pedaleye_app/app.dart';
 import 'package:pedaleye_app/core/calibration/calibration_wizard_state_machine.dart';
 import 'package:pedaleye_app/core/feedback/warning_feedback.dart';
 import 'package:pedaleye_app/core/sensor/mock_pedal_sensor_source.dart';
+import 'package:pedaleye_app/core/sensor/pedal_sensor_source.dart';
+import 'package:pedaleye_app/features/device/application/device_link_controller.dart';
+import 'package:pedaleye_app/features/device/data/sensor_mode_store.dart';
 import 'package:pedaleye_app/core/telemetry/telemetry_controller.dart';
 import 'package:pedaleye_app/features/auth/application/session_controller.dart';
 import 'package:pedaleye_app/features/auth/data/auth_repository.dart';
@@ -126,6 +129,10 @@ Future<SessionController> pumpApp(
   FakeWarningFeedback? feedback,
   FakeEventsRepository? events,
   EventSyncController? eventSync,
+  DeviceLinkController Function(SessionController session)? deviceLink,
+  SensorModeStore? sensorMode,
+  PedalSensorFactory? sensorFactory,
+  bool settle = true,
 }) async {
   final session = SessionController(auth);
   await session.start();
@@ -136,14 +143,23 @@ Future<SessionController> pumpApp(
       invites: invites ?? fakeInvites((_, _) => (500, <String, Object?>{})),
       home: home ?? FakeHomeRepository(driverHome),
       devices: devices ?? FakeDeviceRepository(calibratedDevice),
-      sensorFactory: (sensors ?? FakeSensors()).create,
+      sensorFactory: sensorFactory ?? (sensors ?? FakeSensors()).create,
       warningFeedback: feedback ?? FakeWarningFeedback(),
       events: events ?? FakeEventsRepository(),
       eventSync: eventSync ?? newEventSync(),
       webConsoleUrl: Uri.parse('https://pedaleye.vercel.app'),
+      deviceLink: deviceLink?.call(session),
+      sensorMode: sensorMode,
     ),
   );
-  await tester.pumpAndSettle();
+  // BLE 단말은 20Hz 로 계속 알림을 보내 화면이 멈추지 않으므로 몇 프레임만 돌린다
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  }
   return session;
 }
 
@@ -205,6 +221,7 @@ class FakeDeviceRepository implements DeviceRepository {
         brakeCalibMin: payload.brakeCalibMin,
         brakeCalibMax: payload.brakeCalibMax,
       ),
+      authPublicKey: d.authPublicKey,
     );
   }
 }

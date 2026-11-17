@@ -8,12 +8,18 @@ import 'core/config/app_config.dart';
 import 'core/feedback/warning_feedback.dart';
 import 'core/network/device_connectivity.dart';
 import 'core/network/supabase_client.dart';
+import 'core/ble/ble_transport.dart';
+import 'core/ble/flutter_blue_transport.dart';
+import 'core/ble/virtual_pedaleye_device.dart';
+import 'core/sensor/ble_pedal_sensor_source.dart';
 import 'core/sensor/mock_pedal_sensor_source.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/session_controller.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
 import 'features/calibration/data/device_repository.dart';
+import 'features/device/application/device_link_controller.dart';
+import 'features/device/data/sensor_mode_store.dart';
 import 'features/events/application/event_sync_controller.dart';
 import 'features/events/data/driver_events_repository.dart';
 import 'features/events/data/event_uploader.dart';
@@ -51,19 +57,32 @@ Future<void> main() async {
     connectivity: DeviceConnectivity(),
   );
 
+  // 센서 방식(개발 설정)과 단말 BLE 연결. 실물 단말 전까지 기본은 모의 센서
+  final sensorMode = await SensorModeStore.load(File('${documents.path}/settings/sensor_mode.json'));
+  BleTransport transportFor(SensorMode mode) => mode == SensorMode.virtual ? VirtualBleTransport() : FlutterBlueTransport();
+  final devices = SupabaseDeviceRepository(client);
+  final deviceLink = DeviceLinkController(
+    transport: transportFor(sensorMode.mode),
+    devices: devices,
+    currentUserId: () => session.userId,
+  );
+
   runApp(
     PedalEyeApp(
       session: session,
       auth: auth,
       invites: InviteRepository(baseUrl: config.webApiBaseUrl),
       home: SupabaseDriverHomeRepository(client),
-      devices: SupabaseDeviceRepository(client),
-      // 단말 통신 규격이 정해지면 BLE 구현으로 바꾼다
-      sensorFactory: MockPedalSensorSource.new,
+      devices: devices,
+      // 화면마다 새 센서: 모의 센서 또는 공유 BLE 연결의 실시간 프레임
+      sensorFactory: () => sensorMode.mode == SensorMode.mock ? MockPedalSensorSource() : BlePedalSensorSource(deviceLink),
       warningFeedback: DeviceWarningFeedback(),
       events: SupabaseDriverEventsRepository(client),
       eventSync: eventSync,
       webConsoleUrl: config.webApiBaseUrl,
+      deviceLink: deviceLink,
+      sensorMode: sensorMode,
+      transportFor: transportFor,
     ),
   );
 }

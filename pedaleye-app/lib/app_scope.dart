@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'core/feedback/warning_feedback.dart';
 import 'core/sensor/pedal_sensor_source.dart';
 import 'features/auth/application/session_controller.dart';
+import 'features/device/application/device_link_controller.dart';
+import 'features/device/data/sensor_mode_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
 import 'features/calibration/data/device_repository.dart';
@@ -24,6 +26,8 @@ class AppScope extends InheritedWidget {
     required this.events,
     required this.eventSync,
     required this.webConsoleUrl,
+    this.deviceLink,
+    this.sensorMode,
     required super.child,
   });
 
@@ -39,6 +43,12 @@ class AppScope extends InheritedWidget {
   final DriverEventsRepository events;
   final EventSyncController eventSync;
   final Uri webConsoleUrl;
+
+  /// 배정 단말 BLE 연결(없으면 모의 센서만 쓰는 빌드·테스트)
+  final DeviceLinkController? deviceLink;
+
+  /// 센서 방식(모의·BLE·가상) 개발 설정
+  final SensorModeStore? sensorMode;
 
   static AppScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
@@ -59,5 +69,7 @@ class AppScope extends InheritedWidget {
       auth != oldWidget.auth ||
       invites != oldWidget.invites ||
       home != oldWidget.home ||
-      devices != oldWidget.devices;
+      devices != oldWidget.devices ||
+      deviceLink != oldWidget.deviceLink ||
+      sensorMode != oldWidget.sensorMode;
 }

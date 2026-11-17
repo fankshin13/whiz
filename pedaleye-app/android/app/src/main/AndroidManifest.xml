@@ -1,6 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Supabase·웹 초대 API 통신 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 페달아이 단말 BLE(docs/ble-protocol.md). Android 12+ 는 근처 기기 권한, 위치는 쓰지 않음 -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <!-- Android 11 이하: BLE 검색에 위치 권한이 필요 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
     <application
         android:label="페달아이"
         android:allowBackup="false"
