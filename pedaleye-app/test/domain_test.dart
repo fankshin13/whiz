@@ -56,6 +56,28 @@ void main() {
       );
     });
 
+    test('복사할 때 딸려 온 공백·보이지 않는 문자·따옴표는 정리한다', () {
+      const key = 'sb_publishable_abcdefghijklmnopqrstuvwxyz01234';
+      for (final dirty in ['\uFEFF$key', ' $key ', '\u00A0$key\u200B', '"$key"', "'$key'\r"]) {
+        final c = AppConfig.parse(url: ' $url\u00A0', anonKey: dirty, webApi: '"https://c.example/"');
+        expect(c.supabaseAnonKey, key, reason: dirty.codeUnits.take(2).toString());
+        expect(c.supabaseUrl, url);
+        expect(c.webApiBaseUrl.toString(), 'https://c.example');
+      }
+    });
+
+    test('거부할 때 받은 값의 앞부분·길이·첫 글자 코드를 알려 준다(전체 값은 노출하지 않음)', () {
+      try {
+        AppConfig.parse(url: url, anonKey: 'your-anon-or-publishable-key', webApi: 'https://c');
+        fail('거부해야 함');
+      } on AppConfigException catch (e) {
+        expect(e.message, contains('앞 15자 "your-anon-or-pu"'));
+        expect(e.message, contains('길이 28'));
+        expect(e.message, contains('U+0079'));
+        expect(e.message, isNot(contains('publishable-key')));
+      }
+    });
+
     test('서버 비밀 키·빈 값·잘못된 주소는 거부한다', () {
       expect(
         () => AppConfig.parse(url: url, anonKey: 'not-a-public-key', webApi: 'https://c'),
