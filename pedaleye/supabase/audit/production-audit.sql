@@ -7,7 +7,7 @@ with expected_tables(name) as (
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008')
+         ('20261117000008'), ('20261117000009')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -51,6 +51,10 @@ select 'org_admin_invitations_super_admin_only',
        exists (select 1 from pg_policy
                where polname = 'invitations_insert'
                  and pg_get_expr(polwithcheck, polrelid) like '%role = ''driver''%'),
+       ''
+union all
+select 'vehicle_plate_unique_index',
+       exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'uq_vehicles_plate_normalized'),
        ''
 union all
 select 'database_timezone_asia_seoul',
