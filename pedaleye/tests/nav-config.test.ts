@@ -4,7 +4,7 @@ import { NAV_ITEMS, activeNavHref, isActivePath, navItemsForRole } from "@/compo
 import { allowedRolesForPath } from "@/lib/auth/roles";
 
 describe("네비게이션 설정", () => {
-  it("메뉴 6개가 모두 보호 라우트 맵에 등록돼 있다", () => {
+  it("메뉴 7개가 모두 보호 라우트 맵에 등록돼 있다", () => {
     expect(NAV_ITEMS.map((item) => item.href)).toEqual([
       "/dashboard",
       "/vehicles",
@@ -12,14 +12,15 @@ describe("네비게이션 설정", () => {
       "/devices",
       "/devices/calibrate",
       "/admin/organizations",
+      "/admin/audit",
     ]);
     for (const item of NAV_ITEMS) expect(allowedRolesForPath(item.href)).not.toBeNull();
   });
 
   it("역할별로 접근 가능한 메뉴만 보인다", () => {
     const titles = (role: Parameters<typeof navItemsForRole>[0]) => navItemsForRole(role).map((i) => i.href);
-    expect(titles("super_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices", "/devices/calibrate", "/admin/organizations"]);
-    expect(titles("org_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices", "/devices/calibrate"]);
+    expect(titles("super_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices", "/devices/calibrate", "/admin/organizations", "/admin/audit"]);
+    expect(titles("org_admin")).toEqual(["/dashboard", "/vehicles", "/events", "/devices", "/devices/calibrate", "/admin/audit"]);
     expect(titles("driver")).toEqual(["/dashboard", "/events", "/devices/calibrate"]);
     expect(titles("investigator")).toEqual(["/events"]);
   });

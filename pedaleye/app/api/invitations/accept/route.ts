@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { jsonResponse, readLimitedJson } from "@/lib/server/mobile-api";
 import { acceptInvitation } from "@/lib/invitations/operations";
-import { createRateLimiter } from "@/lib/server/rate-limit";
+import { clientIp, createRateLimiter } from "@/lib/server/rate-limit";
 import { createAdminClient } from "@/lib/server/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const { token, password } = parsed.data;
   // 비밀번호 확인 일치는 앱 화면에서 검사한다
-  const result = await acceptInvitation(createAdminClient(), { token: token.trim(), password, passwordConfirm: password });
+  const result = await acceptInvitation(createAdminClient(clientIp(request)), { token: token.trim(), password, passwordConfirm: password });
 
   if (!result.ok) {
     const status = result.reason === "FAILED" ? 500 : 400;

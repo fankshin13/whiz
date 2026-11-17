@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { postLoginPath } from "@/lib/auth/roles";
 import { acceptInvitation, createInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
 import { getAppBaseUrl } from "@/lib/server/env";
+import { clientIpFromHeaders } from "@/lib/server/rate-limit";
 import { createAdminClient } from "@/lib/server/supabase-admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,8 +33,9 @@ export async function createInvitationAction(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "로그인이 필요합니다. 다시 로그인해 주세요.", values };
 
+  const supabase = await createClient();
   const result = await createInvitation(
-    await createClient(),
+    supabase,
     user,
     {
       vehicleId: formData.get("vehicleId"),
@@ -42,7 +46,10 @@ export async function createInvitationAction(
     getAppBaseUrl(),
   );
   // 목록 갱신은 관리자가 링크를 복사하고 창을 닫을 때 클라이언트에서 한다(즉시 갱신하면 모달이 사라짐).
-  if (!result.ok) return { ...result, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "INVITATION_CREATE", targetType: "invitation", targetName: values.name });
+    return { ...result, values };
+  }
   return result;
 }
 
@@ -64,7 +71,7 @@ export async function acceptInvitationAction(
   _prev: AcceptInvitationState,
   formData: FormData,
 ): Promise<AcceptInvitationState> {
-  const result = await acceptInvitation(createAdminClient(), {
+  const result = await acceptInvitation(createAdminClient(clientIpFromHeaders(await headers())), {
     token: formData.get("token"),
     password: formData.get("password"),
     passwordConfirm: formData.get("passwordConfirm"),

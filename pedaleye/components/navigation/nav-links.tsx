@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Building2, Car, Cpu, LayoutDashboard, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Building2, Car, Cpu, LayoutDashboard, ScrollText, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,7 @@ const ICONS: Record<NavIconName, LucideIcon> = {
   SlidersHorizontal,
   Cpu,
   Building2,
+  ScrollText,
 };
 
 export function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {

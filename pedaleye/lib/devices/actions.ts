@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { mountDevice, registerDevice, unmountDevice } from "@/lib/devices/operations";
 import { createClient } from "@/lib/supabase/server";
@@ -32,14 +33,18 @@ export async function registerDeviceAction(_prev: RegisterDeviceState, formData:
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: LOGIN_REQUIRED, values };
 
-  const result = await registerDevice(await createClient(), user, {
+  const supabase = await createClient();
+  const result = await registerDevice(supabase, user, {
     org_id: values.orgId,
     serial_number: values.serialNumber,
     mac_address: values.macAddress,
     hardware_rev: values.hardwareRev,
     firmware_version: values.firmwareVersion,
   });
-  if (!result.ok) return { ok: false, error: result.error, values };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "DEVICE_CREATE", targetType: "device", targetName: values.serialNumber });
+    return { ok: false, error: result.error, values };
+  }
   revalidateDeviceViews();
   // 대화상자가 닫히면서 결과를 잃지 않도록 서버에서 안내 화면으로 보낸다
   redirect(`/devices?filter=inventory&notice=registered&device=${result.data.id}`);
@@ -53,12 +58,17 @@ export async function mountDeviceAction(_prev: MountDeviceState, formData: FormD
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: LOGIN_REQUIRED, vehicleId };
 
-  const result = await mountDevice(await createClient(), user, {
-    deviceId: String(formData.get("deviceId") ?? "").slice(0, 64),
+  const supabase = await createClient();
+  const deviceId = String(formData.get("deviceId") ?? "").slice(0, 64);
+  const result = await mountDevice(supabase, user, {
+    deviceId,
     vehicleId,
     replace: formData.get("replace") === "on",
   });
-  if (!result.ok) return { ok: false, error: result.error, vehicleId };
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "DEVICE_MOUNT", targetType: "device", targetId: deviceId, targetName: `차량 ${vehicleId}` });
+    return { ok: false, error: result.error, vehicleId };
+  }
   revalidateDeviceViews(vehicleId);
   // 장착되면 단말이 재고 목록에서 빠져 대화상자가 사라지므로, 결과(보정 바로가기 포함)는 안내 화면에서 보여 준다
   const replaced = result.data.replacedSerial ? `&replaced=${encodeURIComponent(result.data.replacedSerial)}` : "";
@@ -73,8 +83,12 @@ export async function unmountDeviceAction(_prev: UnmountDeviceState, formData: F
   if (!user) return { ok: false, error: LOGIN_REQUIRED };
   const vehicleId = String(formData.get("vehicleId") ?? "").slice(0, 64);
   const deviceId = String(formData.get("deviceId") ?? "").slice(0, 64);
-  const result = await unmountDevice(await createClient(), user, deviceId);
-  if (!result.ok) return { ok: false, error: result.error };
+  const supabase = await createClient();
+  const result = await unmountDevice(supabase, user, deviceId);
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "DEVICE_UNMOUNT", targetType: "device", targetId: deviceId });
+    return { ok: false, error: result.error };
+  }
   revalidateDeviceViews(vehicleId || undefined);
   redirect(`/devices?filter=inventory&notice=unmounted&device=${encodeURIComponent(deviceId)}`);
 }

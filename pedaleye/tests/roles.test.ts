@@ -11,6 +11,9 @@ describe("라우트 권한 맵", () => {
     expect(allowedRolesForPath("/devices/calibrate")).toEqual(["super_admin", "org_admin", "driver"]);
     expect(allowedRolesForPath("/devices")).toEqual(["super_admin", "org_admin"]);
     expect(allowedRolesForPath("/devices/")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/audit")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/audit/export")).toEqual(["super_admin", "org_admin"]);
+    expect(allowedRolesForPath("/admin/organizations")).toEqual(["super_admin"]);
     expect(allowedRolesForPath("/admin/organizations")).toEqual(["super_admin"]);
   });
 

@@ -1,6 +1,6 @@
 import { allowedRolesForPath, type UserRole } from "@/lib/auth/roles";
 
-export type NavIconName = "LayoutDashboard" | "Car" | "AlertTriangle" | "SlidersHorizontal" | "Cpu" | "Building2";
+export type NavIconName = "LayoutDashboard" | "Car" | "AlertTriangle" | "SlidersHorizontal" | "Cpu" | "Building2" | "ScrollText";
 
 export interface NavItem {
   title: string;
@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "단말 관리", href: "/devices", iconName: "Cpu" },
   { title: "페달 캘리브레이션", href: "/devices/calibrate", iconName: "SlidersHorizontal" },
   { title: "조직 관리", href: "/admin/organizations", iconName: "Building2" },
+  { title: "감사 로그", href: "/admin/audit", iconName: "ScrollText" },
 ];
 
 /** 역할이 접근할 수 있는 메뉴만 노출(눌러도 403이 되는 메뉴는 숨김). */

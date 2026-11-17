@@ -2,12 +2,12 @@
 -- 모든 행의 ok 가 true 여야 배포 완료로 본다.
 
 with expected_tables(name) as (
-  values ('organizations'), ('users'), ('vehicles'), ('devices'), ('event_sessions'), ('invitations')
+  values ('organizations'), ('users'), ('vehicles'), ('devices'), ('event_sessions'), ('invitations'), ('audit_logs')
 ),
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008'), ('20261117000009'), ('20261117000010')
+         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -69,6 +69,28 @@ union all
 select 'devices_without_org',
        not exists (select 1 from public.devices where org_id is null),
        (select count(*)::text || '대: 슈퍼 관리자가 차량에 장착하면 그 조직으로 정해짐' from public.devices where org_id is null)
+union all
+select 'audit_logs_read_only_for_clients',
+       has_table_privilege('authenticated', 'public.audit_logs', 'SELECT')
+       and not has_table_privilege('authenticated', 'public.audit_logs', 'INSERT')
+       and not has_table_privilege('authenticated', 'public.audit_logs', 'UPDATE')
+       and not has_table_privilege('authenticated', 'public.audit_logs', 'DELETE')
+       and not has_table_privilege('anon', 'public.audit_logs', 'SELECT'),
+       ''
+union all
+select 'audit_logs_immutable_triggers',
+       (select count(*) from pg_trigger where tgrelid = 'public.audit_logs'::regclass
+          and tgname in ('trg_audit_logs_immutable', 'trg_audit_logs_no_truncate') and tgenabled <> 'D') = 2,
+       ''
+union all
+select 'audit_change_triggers',
+       (select count(*) from pg_trigger where tgname in ('trg_audit_organizations', 'trg_audit_vehicles', 'trg_audit_devices',
+          'trg_audit_invitations', 'trg_audit_users') and tgenabled <> 'D') = 5,
+       ''
+union all
+select 'log_admin_audit_event_not_anon',
+       not has_function_privilege('anon', 'public.log_admin_audit_event(public.audit_action_type, text, text, text, jsonb, public.audit_status)', 'EXECUTE'),
+       ''
 union all
 select 'database_timezone_asia_seoul',
        current_setting('timezone') = 'Asia/Seoul',

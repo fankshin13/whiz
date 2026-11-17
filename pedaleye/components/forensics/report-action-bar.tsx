@@ -4,6 +4,14 @@ import { ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { logReportPrintAction } from "@/lib/audit/actions";
+
+/** 인쇄 창을 열면서 감사 기록을 남긴다(기록 실패가 인쇄를 막지 않음). */
+function printWithAudit(sessionId: string) {
+  void logReportPrintAction(sessionId).catch(() => undefined);
+  window.print();
+}
+
 /** 화면 상단 인쇄 도구(인쇄물에는 나오지 않음). autoPrint 면 열리자마자 인쇄 창을 띄운다. */
 export function ReportActionBar({ sessionId, autoPrint }: { sessionId: string; autoPrint: boolean }) {
   const [ready, setReady] = useState(false);
@@ -14,12 +22,12 @@ export function ReportActionBar({ sessionId, autoPrint }: { sessionId: string; a
     void document.fonts.ready.then(() => {
       if (cancelled) return;
       setReady(true);
-      if (autoPrint) window.print();
+      if (autoPrint) printWithAudit(sessionId);
     });
     return () => {
       cancelled = true;
     };
-  }, [autoPrint]);
+  }, [autoPrint, sessionId]);
 
   return (
     <div className="mx-auto grid w-full max-w-[210mm] gap-2 print:hidden">
@@ -28,7 +36,7 @@ export function ReportActionBar({ sessionId, autoPrint }: { sessionId: string; a
           <ArrowLeft aria-hidden="true" size={18} />
           세션 상세로
         </Link>
-        <button type="button" className="btn" onClick={() => window.print()} disabled={!ready} aria-busy={!ready}>
+        <button type="button" className="btn" onClick={() => printWithAudit(sessionId)} disabled={!ready} aria-busy={!ready}>
           {ready ? <Printer aria-hidden="true" size={18} /> : <span className="spinner" aria-hidden="true" />}
           A4 인쇄 / PDF 저장
         </button>

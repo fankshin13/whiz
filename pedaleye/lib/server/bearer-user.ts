@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { CurrentUser } from "@/lib/auth/get-current-user";
 import type { Database } from "@/lib/supabase/database.types";
+import { clientIp } from "@/lib/server/rate-limit";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /**
@@ -18,7 +19,7 @@ export async function getBearerUser(request: Request) {
   const { url, anonKey } = getSupabasePublicEnv();
   const client = createClient<Database>(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
+    global: { headers: { Authorization: `Bearer ${token}`, "x-pedaleye-client-ip": clientIp(request) } },
   });
 
   const { data, error } = await client.auth.getUser(token);

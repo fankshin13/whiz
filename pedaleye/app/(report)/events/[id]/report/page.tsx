@@ -4,8 +4,10 @@ import Link from "next/link";
 
 import { ForensicReportTemplate } from "@/components/forensics/forensic-report-template";
 import { ReportActionBar } from "@/components/forensics/report-action-bar";
+import { logAuditEvent } from "@/lib/audit/operations";
 import { requireUserForPath } from "@/lib/auth/get-current-user";
 import { getForensicReportProjection } from "@/lib/forensics/report-projection";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "디지털 증거 무결성 검증 확인서 | 페달아이" };
 
@@ -20,6 +22,16 @@ export default async function ReportPage({
   const { autoPrint } = await searchParams;
   await requireUserForPath(`/events/${id}/report`);
   const result = await getForensicReportProjection(id);
+  // 디지털 증거 열람 기록(증거 관리 연속성). 권한 거부도 남긴다.
+  if (result.success || result.kind === "forbidden") {
+    await logAuditEvent(await createClient(), {
+      action: "REPORT_VIEW",
+      targetType: "event_report",
+      targetId: id,
+      targetName: `사고 세션 ${id.slice(0, 8)}`,
+      status: result.success ? "SUCCESS" : "DENIED",
+    });
+  }
 
   if (!result.success) {
     return (
