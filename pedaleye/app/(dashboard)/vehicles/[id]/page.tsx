@@ -42,7 +42,7 @@ export default async function VehicleDetailPage({
     ? await supabase
         .from("vehicles")
         .select(
-          "id, plate_number, model_name, model_year, vin_masked, org:organizations(name), driver:users!vehicles_assigned_user_id_fkey(name, email), device:devices(id, serial_number, firmware_version, last_synced_at, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max)",
+          "id, plate_number, model_name, model_year, vin_masked, org:organizations(name), driver:users!vehicles_assigned_user_id_fkey(name, email), device:devices(id, serial_number, firmware_version, last_synced_at, auth_public_key, accel_calib_min, accel_calib_max, brake_calib_min, brake_calib_max)",
         )
         .eq("id", id)
         .maybeSingle()
@@ -123,6 +123,16 @@ export default async function VehicleDetailPage({
               <div className="grid gap-0.5">
                 <dt className="text-caption text-text-muted">마지막 동기화</dt>
                 <dd className="m-0 font-semibold">{device.last_synced_at ? dateTime.format(new Date(device.last_synced_at)) : "아직 없음"}</dd>
+              </div>
+              <div className="grid gap-0.5 sm:col-span-3">
+                <dt className="text-caption text-text-muted">단말 인증</dt>
+                <dd className="m-0 font-semibold">
+                  {device.auth_public_key ? (
+                    <span className="text-good">Ed25519 인증 키 등록 완료</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md border-2 border-dual-warning bg-dual-warning/15 px-2 text-caption">인증 미설정(시험 단말)</span>
+                  )}
+                </dd>
               </div>
             </dl>
             <p className="m-0 text-text-muted">{factoryCalibration ? "아직 보정 전입니다(공장 기본값)." : "보정값이 저장되어 있습니다."}</p>

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { mountDevice, registerDevice, unmountDevice } from "@/lib/devices/operations";
+import { mountDevice, registerDevice, setDevicePublicKey, unmountDevice } from "@/lib/devices/operations";
 import { createClient } from "@/lib/supabase/server";
 
 const LOGIN_REQUIRED = "로그인이 필요합니다.";
@@ -17,7 +17,7 @@ function revalidateDeviceViews(vehicleId?: string) {
   if (vehicleId) revalidatePath(`/vehicles/${vehicleId}`);
 }
 
-type RegisterValues = { orgId: string; serialNumber: string; macAddress: string; hardwareRev: string; firmwareVersion: string };
+type RegisterValues = { orgId: string; serialNumber: string; macAddress: string; hardwareRev: string; firmwareVersion: string; publicKey: string };
 export type RegisterDeviceState = { ok: null } | { ok: false; error: string; values: RegisterValues };
 
 /** 단말 재고 등록(슈퍼 관리자). 실패하면 입력값을 돌려줘 폼을 다시 채운다. */
@@ -29,6 +29,7 @@ export async function registerDeviceAction(_prev: RegisterDeviceState, formData:
     macAddress: text("macAddress", 30),
     hardwareRev: text("hardwareRev", 30),
     firmwareVersion: text("firmwareVersion", 30),
+    publicKey: text("publicKey", 200),
   };
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: LOGIN_REQUIRED, values };
@@ -40,6 +41,7 @@ export async function registerDeviceAction(_prev: RegisterDeviceState, formData:
     mac_address: values.macAddress,
     hardware_rev: values.hardwareRev,
     firmware_version: values.firmwareVersion,
+    auth_public_key: values.publicKey,
   });
   if (!result.ok) {
     await auditIfDenied(supabase, result.error, { action: "DEVICE_CREATE", targetType: "device", targetName: values.serialNumber });
@@ -91,4 +93,26 @@ export async function unmountDeviceAction(_prev: UnmountDeviceState, formData: F
   }
   revalidateDeviceViews(vehicleId || undefined);
   redirect(`/devices?filter=inventory&notice=unmounted&device=${encodeURIComponent(deviceId)}`);
+}
+
+export type DeviceKeyState = { ok: null } | { ok: false; error: string; publicKey: string; reason: string };
+
+/** 인증 공개키 교체·해제(슈퍼 관리자). 성공하면 단말 목록 안내로 돌아간다. */
+export async function setDevicePublicKeyAction(_prev: DeviceKeyState, formData: FormData): Promise<DeviceKeyState> {
+  const deviceId = String(formData.get("deviceId") ?? "").slice(0, 64);
+  const revoke = formData.get("revoke") === "on";
+  const publicKey = revoke ? "" : String(formData.get("publicKey") ?? "").slice(0, 200);
+  const reason = String(formData.get("reason") ?? "").slice(0, 200);
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: LOGIN_REQUIRED, publicKey, reason };
+  if (!revoke && !publicKey.trim()) return { ok: false, error: "새 공개키를 입력하거나 '키 등록 해제'를 선택해 주세요.", publicKey, reason };
+
+  const supabase = await createClient();
+  const result = await setDevicePublicKey(supabase, user, { deviceId, publicKey, reason });
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "DEVICE_KEY_UPDATE", targetType: "device", targetId: deviceId });
+    return { ok: false, error: result.error, publicKey, reason };
+  }
+  revalidateDeviceViews();
+  redirect(`/devices?notice=${revoke ? "key_revoked" : "key_updated"}&device=${encodeURIComponent(deviceId)}`);
 }

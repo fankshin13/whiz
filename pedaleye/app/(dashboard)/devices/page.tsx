@@ -1,15 +1,15 @@
-import { AlertTriangle, CheckCircle2, Cpu } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Cpu, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { MountDeviceDialog, RegisterDeviceDialog, UnmountDeviceDialog, type MountTarget } from "@/components/devices/device-dialogs";
+import { DevicePublicKeyDialog, MountDeviceDialog, RegisterDeviceDialog, UnmountDeviceDialog, type MountTarget } from "@/components/devices/device-dialogs";
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { RetryAlert } from "@/components/page/retry-alert";
 import { Section } from "@/components/page/section";
 import { requireUserForPath, type CurrentUser } from "@/lib/auth/get-current-user";
-import { listDevices, SERIAL_PATTERN, type DeviceListItem } from "@/lib/devices/operations";
+import { listDevices, maskPublicKey, SERIAL_PATTERN, type DeviceListItem } from "@/lib/devices/operations";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "단말 관리 | 페달아이" };
@@ -140,6 +140,17 @@ async function DeviceList({ user, filter, params }: { user: CurrentUser; filter:
                     보정 필요
                   </Link>
                 ) : null}
+                {device.authPublicKey ? (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-good bg-good-bg px-2 text-caption font-semibold text-good">
+                    <ShieldCheck aria-hidden="true" size={14} />
+                    인증 키 등록
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md border-2 border-dual-warning bg-dual-warning/15 px-2 text-caption font-semibold text-text-main">
+                    <ShieldAlert aria-hidden="true" size={14} />
+                    인증 미설정(시험 단말)
+                  </span>
+                )}
               </div>
               <dl className="m-0 grid gap-x-6 gap-y-1 text-text-muted sm:grid-cols-2">
                 <Item label="장착 차량">
@@ -156,6 +167,9 @@ async function DeviceList({ user, filter, params }: { user: CurrentUser; filter:
                 <Item label="HW / FW">
                   {device.hardwareRev} / {device.firmwareVersion}
                 </Item>
+                <Item label="인증 키">
+                  {device.authPublicKey ? <span className="break-all font-mono">{maskPublicKey(device.authPublicKey)}</span> : "미등록"}
+                </Item>
                 <Item label="마지막 동기화">
                   {device.lastSyncedAt ? <time dateTime={device.lastSyncedAt}>{dateFormat.format(new Date(device.lastSyncedAt))}</time> : "기록 없음"}
                 </Item>
@@ -166,6 +180,9 @@ async function DeviceList({ user, filter, params }: { user: CurrentUser; filter:
                 ) : (
                   <MountDeviceDialog deviceId={device.id} serialNumber={device.serialNumber} vehicles={mountTargets(device)} />
                 )}
+                {user.role === "super_admin" ? (
+                  <DevicePublicKeyDialog deviceId={device.id} serialNumber={device.serialNumber} maskedKey={maskPublicKey(device.authPublicKey)} />
+                ) : null}
               </div>
             </li>
           ))}
@@ -192,6 +209,8 @@ function Notice({ params, devices }: { params: SearchParams; devices: DeviceList
 
   let body: React.ReactNode = null;
   if (params.notice === "registered") body = <p className="m-0">단말 {device.serialNumber}이(가) 미장착 재고로 등록되었습니다.</p>;
+  if (params.notice === "key_updated") body = <p className="m-0">단말 {device.serialNumber}의 인증 공개키를 저장했습니다. 변경 내용은 감사 로그에 남았습니다.</p>;
+  if (params.notice === "key_revoked") body = <p className="m-0">단말 {device.serialNumber}의 인증 공개키 등록을 해제했습니다(시험 단말).</p>;
   if (params.notice === "unmounted") body = <p className="m-0">단말 {device.serialNumber}의 장착을 해제했습니다. 미장착 재고로 전환되었습니다.</p>;
   if (params.notice === "mounted" && device.vehicle) {
     body = (
