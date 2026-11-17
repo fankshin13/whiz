@@ -39,6 +39,8 @@
 - 연결·인증 상태 기계: `lib/features/device/application/device_link_controller.dart`, 블루투스: `lib/core/ble/flutter_blue_transport.dart`(flutter_blue_plus)
 - 공개키가 없는 단말(인증 미설정)은 홈에서 경고 후 운전자가 동의할 때만 연결합니다.
 - 보정 결과는 BLE 단말에 먼저 쓰고 성공해야 서버에 저장합니다(단말·서버 기준값 불일치 방지).
+- 사고 기록 BLE 백업(`device_log_sync.dart`): 연결되면 단말 목록(LIST)을 보고, 보관 완료가 아닌 기록을 이어받기로 내려받아(청크 CRC8·NACK, 끊기면 받은 곳부터) CRC-32·해시 체인·봉인 서명을 확인한 뒤 기기에 백업하고 업로드합니다. **서버가 무결성 통과로 응답한 기록만** 단말에 보관 완료(CONFIRM_ARCHIVED)를 보내며, 변조·손상 기록은 단말 원본을 그대로 둡니다.
+- 가상 단말 모드에서는 센서 설정 화면의 시뮬레이터로 사고 기록 만들기·변조 기록·전송 50%에서 끊기·청크 유실/손상·위조 단말을 시험할 수 있습니다.
 - 권한: Android 12+ 근처 기기(BLUETOOTH_SCAN `neverForLocation`·BLUETOOTH_CONNECT), 11 이하 위치 권한.
 
 ## 실행

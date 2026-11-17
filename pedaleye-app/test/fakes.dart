@@ -11,7 +11,9 @@ import 'package:pedaleye_app/core/calibration/calibration_wizard_state_machine.d
 import 'package:pedaleye_app/core/feedback/warning_feedback.dart';
 import 'package:pedaleye_app/core/sensor/mock_pedal_sensor_source.dart';
 import 'package:pedaleye_app/core/sensor/pedal_sensor_source.dart';
+import 'package:pedaleye_app/core/ble/virtual_pedaleye_device.dart';
 import 'package:pedaleye_app/features/device/application/device_link_controller.dart';
+import 'package:pedaleye_app/features/device/application/device_log_sync.dart';
 import 'package:pedaleye_app/features/device/data/sensor_mode_store.dart';
 import 'package:pedaleye_app/core/telemetry/telemetry_controller.dart';
 import 'package:pedaleye_app/features/auth/application/session_controller.dart';
@@ -133,9 +135,13 @@ Future<SessionController> pumpApp(
   SensorModeStore? sensorMode,
   PedalSensorFactory? sensorFactory,
   bool settle = true,
+  DeviceLogSync? Function(DeviceLinkController? link, EventSyncController events)? deviceLogSync,
+  VirtualPedalEyeDevice? virtualDevice,
 }) async {
   final session = SessionController(auth);
   await session.start();
+  final link = deviceLink?.call(session);
+  final sync = eventSync ?? newEventSync();
   await tester.pumpWidget(
     PedalEyeApp(
       session: session,
@@ -146,10 +152,12 @@ Future<SessionController> pumpApp(
       sensorFactory: sensorFactory ?? (sensors ?? FakeSensors()).create,
       warningFeedback: feedback ?? FakeWarningFeedback(),
       events: events ?? FakeEventsRepository(),
-      eventSync: eventSync ?? newEventSync(),
+      eventSync: sync,
       webConsoleUrl: Uri.parse('https://pedaleye.vercel.app'),
-      deviceLink: deviceLink?.call(session),
+      deviceLink: link,
       sensorMode: sensorMode,
+      deviceLogSync: deviceLogSync?.call(link, sync),
+      virtualDevice: virtualDevice,
     ),
   );
   // BLE 단말은 20Hz 로 계속 알림을 보내 화면이 멈추지 않으므로 몇 프레임만 돌린다
@@ -267,6 +275,7 @@ class MemoryBackupStore implements EventBackupStore {
       recordCount: session.recordCount,
       status: UploadStatus.pending,
       createdAtMs: 0,
+      seal: session.seal,
     );
     meta[id] = backup;
     return backup;
@@ -328,7 +337,8 @@ class FakeEventsRepository implements DriverEventsRepository {
   int lists = 0;
 
   UploadOutcome addFromPel(LocalEventBackup backup, Uint8List pel) {
-    final result = verifyForTest(pel, backup.deviceId);
+    // 단말 봉인 기록은 일련번호, 앱이 만든 기록은 단말 ID 로 체인을 시작한다(서버와 같은 규칙)
+    final result = verifyForTest(pel, backup.seal?.serial ?? backup.deviceId);
     final existing = sessions.where((s) => s.finalHash == result.finalHash && s.integrityVerified).firstOrNull;
     if (existing != null && result.isValid) {
       return UploadOutcome(sessionId: existing.id, integrityVerified: true, duplicate: true);

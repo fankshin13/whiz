@@ -72,6 +72,8 @@ class HttpEventUploader implements EventUploader {
               'startTime': DateTime.fromMillisecondsSinceEpoch(backup.startTimeMs, isUtc: true).toIso8601String(),
               'endTime': DateTime.fromMillisecondsSinceEpoch(backup.endTimeMs, isUtc: true).toIso8601String(),
               'rawLogBase64': base64Encode(pel),
+              // 단말이 봉인한 기록: 서버가 일련번호 체인과 봉인 서명을 확인한다
+              if (backup.seal case final seal?) ...{'deviceSessionIndex': seal.sessionIndex, 'sealSignature': seal.signatureBase64},
             }),
           )
           .timeout(const Duration(seconds: 30));

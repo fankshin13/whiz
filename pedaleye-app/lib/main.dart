@@ -19,6 +19,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
 import 'features/calibration/data/device_repository.dart';
 import 'features/device/application/device_link_controller.dart';
+import 'features/device/application/device_log_sync.dart';
 import 'features/device/data/sensor_mode_store.dart';
 import 'features/events/application/event_sync_controller.dart';
 import 'features/events/data/driver_events_repository.dart';
@@ -59,13 +60,21 @@ Future<void> main() async {
 
   // 센서 방식(개발 설정)과 단말 BLE 연결. 실물 단말 전까지 기본은 모의 센서
   final sensorMode = await SensorModeStore.load(File('${documents.path}/settings/sensor_mode.json'));
-  BleTransport transportFor(SensorMode mode) => mode == SensorMode.virtual ? VirtualBleTransport() : FlutterBlueTransport();
+  // 가상 단말은 앱이 켜져 있는 동안 하나를 유지한다(만든 사고 기록이 남도록)
+  final virtualDevice = VirtualPedalEyeDevice();
+  BleTransport transportFor(SensorMode mode) =>
+      mode == SensorMode.virtual ? VirtualBleTransport(devices: [virtualDevice]) : FlutterBlueTransport();
   final devices = SupabaseDeviceRepository(client);
   final deviceLink = DeviceLinkController(
     transport: transportFor(sensorMode.mode),
     devices: devices,
     currentUserId: () => session.userId,
   );
+  final deviceLogSync = DeviceLogSync(
+    link: deviceLink,
+    events: eventSync,
+    partials: FilePartialDownloadStore(Directory('${documents.path}/ble_incoming')),
+  )..attach();
 
   runApp(
     PedalEyeApp(
@@ -83,6 +92,8 @@ Future<void> main() async {
       deviceLink: deviceLink,
       sensorMode: sensorMode,
       transportFor: transportFor,
+      deviceLogSync: deviceLogSync,
+      virtualDevice: virtualDevice,
     ),
   );
 }

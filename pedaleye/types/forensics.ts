@@ -44,5 +44,7 @@ export interface SessionForensicData {
   startTime: string;
   endTime: string;
   verification: VerificationResult;
+  /** 단말 봉인 서명: verified 확인됨 · invalid 불일치 · none 앱이 만든 기록(봉인 없음) */
+  deviceSealed?: "verified" | "invalid" | "none";
   packets: DecodedPacket[];
 }

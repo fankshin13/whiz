@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/status_message.dart';
 import '../../device/application/device_link_controller.dart';
 import '../../device/data/sensor_mode_store.dart';
+import '../../device/presentation/device_log_sync_card.dart';
 import '../../device/presentation/device_status_card.dart';
 import '../data/driver_home_repository.dart';
 import '../domain/driver_home_data.dart';
@@ -75,6 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('페달아이 단말', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: AppSpacing.s3),
                   DeviceStatusCard(link: link),
+                  if (AppScope.of(context).deviceLogSync case final sync?) ...[
+                    const SizedBox(height: AppSpacing.s3),
+                    DeviceLogSyncCard(sync: sync),
+                  ],
                   const SizedBox(height: AppSpacing.s6),
                 ],
                 Text('배정 차량', style: Theme.of(context).textTheme.titleMedium),

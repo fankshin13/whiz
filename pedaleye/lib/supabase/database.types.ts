@@ -65,14 +65,14 @@ isOneToOne: true
                   ]
                 },"event_sessions": {
                   Row: {
-                    "created_at": string,"device_id": string,"end_time": string,"final_chain_hash": string,"id": string,"initial_chain_hash": string,"integrity_verified": boolean,"raw_log_storage_path": string | null,"record_count": number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
+                    "created_at": string,"device_id": string,"device_seal_signature": string | null,"device_seal_verified": boolean,"device_session_index": number | null,"end_time": string,"final_chain_hash": string,"id": string,"initial_chain_hash": string,"integrity_verified": boolean,"raw_log_storage_path": string | null,"record_count": number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"device_id": string,"end_time": string,"final_chain_hash": string,"id"?: string,"initial_chain_hash": string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
+                    "created_at"?: string,"device_id": string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time": string,"final_chain_hash": string,"id"?: string,"initial_chain_hash": string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
                   }
                   Update: {
-                    "created_at"?: string,"device_id"?: string,"end_time"?: string,"final_chain_hash"?: string,"id"?: string,"initial_chain_hash"?: string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time"?: string,"trigger_type"?: Database["public"]['Enums']["trigger_type"]
+                    "created_at"?: string,"device_id"?: string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time"?: string,"final_chain_hash"?: string,"id"?: string,"initial_chain_hash"?: string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time"?: string,"trigger_type"?: Database["public"]['Enums']["trigger_type"]
                   }
                   Relationships: [
                     {

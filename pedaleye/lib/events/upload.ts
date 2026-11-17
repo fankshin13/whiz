@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { CurrentUser } from "@/lib/auth/get-current-user";
 import { listCalibrationTargets } from "@/lib/calibration/operations";
 import type { Database } from "@/lib/supabase/database.types";
+import { genesisSubject, sealMessage, verifySeal } from "@/lib/events/device-seal";
 import { computeGenesisHash, toHex, verifyBinaryHashChain } from "@/lib/telemetry/hash-chain-engine";
 import { HASH_SIZE, PACKET_SIZE, decodePacketRecord } from "@/lib/telemetry/packet-codec";
 
@@ -15,13 +16,18 @@ const MAX_RECORDS = 3000; // 50Hz × 60초
 const MAX_BASE64_LENGTH = Math.ceil(((MAX_RECORDS * PACKET_SIZE + HASH_SIZE) * 4) / 3) + 4;
 const TIME_TOLERANCE_MS = 1000;
 
-export const uploadEventSessionSchema = z.object({
-  deviceId: z.guid(),
-  triggerType: z.enum(["shock", "sudden_accel", "manual", "periodic"]),
-  startTime: z.iso.datetime({ offset: true }),
-  endTime: z.iso.datetime({ offset: true }),
-  rawLogBase64: z.base64().max(MAX_BASE64_LENGTH),
-});
+export const uploadEventSessionSchema = z
+  .object({
+    deviceId: z.guid(),
+    triggerType: z.enum(["shock", "sudden_accel", "manual", "periodic"]),
+    startTime: z.iso.datetime({ offset: true }),
+    endTime: z.iso.datetime({ offset: true }),
+    rawLogBase64: z.base64().max(MAX_BASE64_LENGTH),
+    // 단말이 만든 기록(BLE 전송): 단말의 세션 번호와 봉인 서명(둘 다 있거나 둘 다 없음)
+    deviceSessionIndex: z.number().int().min(0).max(4294967295).optional(),
+    sealSignature: z.base64().length(88).optional(),
+  })
+  .refine((v) => (v.deviceSessionIndex === undefined) === (v.sealSignature === undefined), { message: "봉인 정보가 불완전합니다." });
 
 export type UploadSessionResult =
   | {
@@ -33,6 +39,8 @@ export type UploadSessionResult =
       integrityVerified: boolean;
       brokenSequenceId?: number;
       duplicate: boolean;
+      /** 단말 봉인 기록이면 봉인 서명 확인 결과 */
+      deviceSealVerified?: boolean;
     }
   | { success: false; status: 400 | 403 | 500; error: string };
 
@@ -62,7 +70,9 @@ export async function uploadEventSession(
 
   if (user.role === "investigator") return FORBIDDEN;
   const targets = await listCalibrationTargets(userClient, user);
-  if (!targets.some((target) => target.deviceId === payload.deviceId)) return FORBIDDEN;
+  const target = targets.find((t) => t.deviceId === payload.deviceId);
+  if (!target) return FORBIDDEN;
+  const sealed = payload.sealSignature !== undefined;
 
   const bytes = new Uint8Array(Buffer.from(payload.rawLogBase64, "base64"));
   const body = bytes.length - HASH_SIZE;
@@ -79,10 +89,29 @@ export async function uploadEventSession(
     return { success: false, status: 400, error: "세션 시작·종료 시각이 로그 내용과 다릅니다." };
   }
 
-  const genesis = toHex(await computeGenesisHash(payload.deviceId, firstMs));
+  const genesis = toHex(await computeGenesisHash(genesisSubject({ deviceId: payload.deviceId, serial: target.serialNumber, sealed }), firstMs));
   const verification = await verifyBinaryHashChain(bytes, { expectedInitialHash: genesis });
   const initialHash = toHex(bytes.subarray(32, 64));
   const finalHash = verification.finalHash || toHex(bytes.subarray(body));
+
+  // 단말 봉인: 등록된 공개키로 (일련번호·세션 번호·시작·레코드 수·파일 끝의 최종 해시) 서명을 확인한다
+  let sealVerified = false;
+  if (sealed) {
+    const { data: device, error: keyError } = await admin.from("devices").select("auth_public_key").eq("id", payload.deviceId).maybeSingle();
+    if (keyError) {
+      console.error("uploadEventSession key lookup failed", { code: keyError.code });
+      return FAILED;
+    }
+    const message = sealMessage({
+      serial: target.serialNumber,
+      sessionIndex: payload.deviceSessionIndex ?? 0,
+      startMs: firstMs,
+      recordCount,
+      finalHash: bytes.subarray(body),
+    });
+    sealVerified = verifySeal(device?.auth_public_key ?? null, payload.sealSignature ?? "", message);
+  }
+  const integrityVerified = verification.isValid && (!sealed || sealVerified);
   const startTime = new Date(firstMs).toISOString();
 
   const result = (sessionId: string, duplicate: boolean): UploadSessionResult => ({
@@ -91,9 +120,10 @@ export async function uploadEventSession(
     recordCount,
     initialHash,
     finalHash,
-    integrityVerified: verification.isValid,
+    integrityVerified,
     brokenSequenceId: verification.brokenSequenceId,
     duplicate,
+    ...(sealed ? { deviceSealVerified: sealVerified } : {}),
   });
 
   const findExisting = async () => {
@@ -110,7 +140,7 @@ export async function uploadEventSession(
   };
 
   // 검증 통과 세션만 중복 판정. 변조·손상 파일은 매번 따로 남긴다.
-  if (verification.isValid) {
+  if (integrityVerified) {
     const existing = await findExisting();
     if (existing) return result(existing.id, true);
   }
@@ -134,14 +164,17 @@ export async function uploadEventSession(
     record_count: recordCount,
     initial_chain_hash: initialHash,
     final_chain_hash: finalHash,
-    integrity_verified: verification.isValid,
+    integrity_verified: integrityVerified,
     raw_log_storage_path: path,
+    device_session_index: payload.deviceSessionIndex ?? null,
+    device_seal_signature: payload.sealSignature ?? null,
+    device_seal_verified: sealVerified,
   });
 
   if (insertError) {
     const { error: removeError } = await admin.storage.from(EVENT_LOG_BUCKET).remove([path]);
     if (removeError) console.error("uploadEventSession cleanup failed", { message: removeError.message });
-    if (insertError.code === "23505" && verification.isValid) {
+    if (insertError.code === "23505" && integrityVerified) {
       const raced = await findExisting();
       if (raced) return result(raced.id, true);
     }

@@ -9,8 +9,10 @@ import 'core/router/app_router.dart';
 import 'core/sensor/pedal_sensor_source.dart';
 import 'core/theme/app_theme.dart';
 import 'core/ble/ble_transport.dart';
+import 'core/ble/virtual_pedaleye_device.dart';
 import 'features/auth/application/session_controller.dart';
 import 'features/device/application/device_link_controller.dart';
+import 'features/device/application/device_log_sync.dart';
 import 'features/device/data/sensor_mode_store.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/data/invite_repository.dart';
@@ -35,6 +37,8 @@ class PedalEyeApp extends StatefulWidget {
     this.deviceLink,
     this.sensorMode,
     this.transportFor,
+    this.deviceLogSync,
+    this.virtualDevice,
   });
 
   final SessionController session;
@@ -52,6 +56,8 @@ class PedalEyeApp extends StatefulWidget {
 
   /// 센서 방식별 BLE 전송(실제 블루투스·가상 단말)
   final BleTransport Function(SensorMode mode)? transportFor;
+  final DeviceLogSync? deviceLogSync;
+  final VirtualPedalEyeDevice? virtualDevice;
 
   @override
   State<PedalEyeApp> createState() => _PedalEyeAppState();
@@ -126,6 +132,8 @@ class _PedalEyeAppState extends State<PedalEyeApp> {
       webConsoleUrl: widget.webConsoleUrl,
       deviceLink: widget.deviceLink,
       sensorMode: widget.sensorMode,
+      deviceLogSync: widget.deviceLogSync,
+      virtualDevice: widget.virtualDevice,
       child: MaterialApp.router(
         title: '페달아이',
         debugShowCheckedModeBanner: false,

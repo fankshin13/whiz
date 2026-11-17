@@ -10,6 +10,7 @@ import 'package:pedaleye_app/core/text/keep_all.dart';
 import 'package:pedaleye_app/core/theme/app_theme.dart';
 import 'package:pedaleye_app/features/calibration/domain/driver_device.dart';
 import 'package:pedaleye_app/features/device/application/device_link_controller.dart';
+import 'package:pedaleye_app/features/device/application/device_log_sync.dart';
 import 'package:pedaleye_app/features/device/data/sensor_mode_store.dart';
 import 'package:pedaleye_app/features/device/presentation/device_status_card.dart';
 import 'package:pedaleye_app/features/gauge/presentation/pedal_gauge_widgets.dart';
@@ -193,5 +194,41 @@ void main() {
     final reloaded = (await tester.runAsync(() => SensorModeStore.load(file)))!;
     expect(reloaded.mode, SensorMode.virtual);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('[320dp] 단말 사고 기록 백업 진행률과 완료를 홈에 보여 주고, 서버 검증 뒤 단말에 보관 완료를 보낸다', (tester) async {
+    useNarrowPhone(tester);
+    final stored = (await tester.runAsync(() => device.recordSession(records: 1500)))!;
+    final devices = FakeDeviceRepository(deviceWith(calibratedDevice, key));
+    late DeviceLinkController link;
+    DeviceLogSync? sync;
+    await pumpApp(
+      tester,
+      auth: fakeAuth(signedInAs: driverId),
+      devices: devices,
+      sensorMode: SensorModeStore(null, initial: SensorMode.virtual),
+      deviceLink: (session) => link = DeviceLinkController(
+        transport: VirtualBleTransport(devices: [device]),
+        devices: devices,
+        currentUserId: () => session.userId,
+        delay: (_) => Future<void>.delayed(const Duration(milliseconds: 10)),
+      ),
+      deviceLogSync: (l, events) => sync = DeviceLogSync(link: l!, events: events, partials: MemoryPartialDownloadStore())..attach(),
+      virtualDevice: device,
+      sensorFactory: () => BlePedalSensorSource(link),
+      settle: false,
+    );
+    await until(tester, () => sync!.phase == LogSyncPhase.downloading && sync!.receivedBytes > 0);
+    await tester.pump();
+    expect(find.text('단말 사고 기록 백업 중'), findsOneWidget);
+    expect(find.textContaining('% ('), findsOneWidget);
+    expect(find.textContaining('/ 96.0 KB'), findsOneWidget);
+    await until(tester, () => stored.archived);
+    await tester.pump();
+    expect(find.text('백업 완료'), findsOneWidget);
+    expect(find.text(keepAll(logSyncDoneMessage)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await stopLink(tester, link);
+    sync!.dispose();
   });
 }

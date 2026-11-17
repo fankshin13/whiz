@@ -17,6 +17,7 @@ class LocalEventBackup {
     this.serverSessionId,
     this.integrityVerified,
     this.errorMessage,
+    this.seal,
   });
 
   final String localId;
@@ -32,6 +33,9 @@ class LocalEventBackup {
   final String? serverSessionId;
   final bool? integrityVerified;
   final String? errorMessage;
+
+  /// 단말이 봉인한 기록이면 봉인 정보(업로드에 함께 보내고, 서버 확인 뒤 단말에 보관 완료를 알린다)
+  final DeviceSeal? seal;
 
   LocalEventBackup copyWith({
     UploadStatus? status,
@@ -51,6 +55,7 @@ class LocalEventBackup {
     serverSessionId: serverSessionId ?? this.serverSessionId,
     integrityVerified: integrityVerified ?? this.integrityVerified,
     errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    seal: seal,
   );
 
   Map<String, Object?> toJson() => {
@@ -65,6 +70,7 @@ class LocalEventBackup {
     'serverSessionId': serverSessionId,
     'integrityVerified': integrityVerified,
     'errorMessage': errorMessage,
+    if (seal != null) 'deviceSeal': seal!.toJson(),
   };
 
   /// 형식이 맞지 않으면 null(손상된 메타데이터는 목록에서 '손상'으로 따로 알린다)
@@ -93,6 +99,7 @@ class LocalEventBackup {
       serverSessionId: serverId is String ? serverId : null,
       integrityVerified: verified is bool ? verified : null,
       errorMessage: error is String ? error : null,
+      seal: DeviceSeal.fromJson(json['deviceSeal']),
     );
   }
 }

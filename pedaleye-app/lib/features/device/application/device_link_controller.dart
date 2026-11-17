@@ -109,6 +109,9 @@ class DeviceLinkController extends ChangeNotifier {
   DeviceLinkStatus get status => _status;
   DriverDevice? get device => _device;
   bool get isConnected => _status == DeviceLinkStatus.connected;
+
+  /// 인증까지 끝난 연결(사고 기록 전송에 쓴다). 연결 전이면 null
+  BleLink? get activeLink => isConnected ? _link : null;
   Stream<RealtimeFrame> get frames => _frames.stream;
 
   /// 가상 단말 ↔ 실제 블루투스 전환(개발 설정)

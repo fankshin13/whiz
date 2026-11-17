@@ -7,7 +7,7 @@ with expected_tables(name) as (
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013'), ('20261117000014'), ('20261117000015')
+         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013'), ('20261117000014'), ('20261117000015'), ('20261117000016')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -127,6 +127,11 @@ union all
 select 'devices_without_auth_key',
        not exists (select 1 from public.devices where auth_public_key is null),
        (select count(*)::text || '대: 인증 미설정(시험 단말). 출하 공개키를 등록하세요' from public.devices where auth_public_key is null)
+union all
+select 'device_sealed_sessions',
+       exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'event_sessions' and column_name = 'device_seal_verified')
+       and exists (select 1 from pg_constraint where conname = 'chk_event_sessions_seal_pair'),
+       ''
 union all
 select 'database_timezone_asia_seoul',
        current_setting('timezone') = 'Asia/Seoul',
