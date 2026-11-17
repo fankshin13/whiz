@@ -14,7 +14,8 @@ dependencies:
   device_info_plus: ^13.3.0
   flutter:
     sdk: flutter
-  flutter_blue_plus: ^1.34.5
+  # 1.x(BSD-3) 고정: 2.x 는 영리 목적 사용에 상용 라이선스가 필요하다
+  flutter_blue_plus: 1.34.5
   flutter_secure_storage: ^11.2.0
   go_router: ^18.1.0
   http: ^1.6.0
