@@ -23,10 +23,17 @@ class InviteRepository {
       final inviteeName = body['inviteeName'];
       final orgName = body['orgName'];
       final plate = body['vehiclePlate'];
+      final role = body['role'];
       if (email is! String || inviteeName is! String || orgName is! String || (plate != null && plate is! String)) {
         throw const InviteNetworkException();
       }
-      return ValidInvitation(email: email, inviteeName: inviteeName, orgName: orgName, vehiclePlate: plate as String?);
+      return ValidInvitation(
+        email: email,
+        inviteeName: inviteeName,
+        orgName: orgName,
+        vehiclePlate: plate as String?,
+        role: role is String ? role : null,
+      );
     }
     final reason = body['reason'];
     return UnusableInvitation(reason is String ? reason : 'NOT_FOUND');

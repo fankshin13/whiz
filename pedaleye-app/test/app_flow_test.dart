@@ -154,6 +154,27 @@ void main() {
         expect(find.byType(LoginScreen), findsOneWidget);
       });
 
+      testWidgets('사고조사관 초대는 앱에서 가입하지 않고 웹 이용 안내', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        var accepts = 0;
+        await pumpApp(
+          tester,
+          auth: fakeAuth(),
+          invites: fakeInvites((path, _) {
+            if (path.endsWith('/accept')) accepts += 1;
+            return (200, {'isValid': true, 'email': 'i@x.kr', 'inviteeName': '조사관', 'orgName': '조직', 'vehiclePlate': null, 'role': 'investigator'});
+          }),
+        );
+        await tester.tap(find.widgetWithText(TextButton, '초대 수락'));
+        await tester.pumpAndSettle();
+        await tester.enterText(field('초대 링크 또는 코드'), token);
+        await tester.tap(find.widgetWithText(FilledButton, '초대 확인'));
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll(webOnlyInviteMessage)), findsOneWidget);
+        expect(find.text('새 비밀번호'), findsNothing);
+        expect(accepts, 0);
+      });
+
       testWidgets('관리자가 취소한 초대는 취소 안내(확인·수락 단계 모두)', (tester) async {
         if (narrow) useNarrowPhone(tester);
         await pumpApp(

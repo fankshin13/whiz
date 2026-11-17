@@ -58,6 +58,7 @@ describe("POST /api/invitations/verify", () => {
       inviteeName: "앱 verify",
       orgName: "화성시 교통안전과",
       vehiclePlate: "56다 1004",
+      role: "driver",
     });
   });
 

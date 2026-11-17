@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { auditIfDenied } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { postLoginPath } from "@/lib/auth/roles";
-import { acceptInvitation, createInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
+import { acceptInvitation, createInvestigatorInvitation, createInvitation, type CreateInvitationResult } from "@/lib/invitations/operations";
 import { getAppBaseUrl } from "@/lib/server/env";
 import { clientIpFromHeaders } from "@/lib/server/rate-limit";
 import { createAdminClient } from "@/lib/server/supabase-admin";
@@ -95,4 +95,39 @@ export async function acceptInvitationAction(
 
   revalidatePath("/", "layout");
   redirect(postLoginPath(result.role, null));
+}
+
+type AccountInviteValues = { orgId: string; name: string; email: string; expiresInHours: string };
+export type InvestigatorInvitationState =
+  | Extract<CreateInvitationResult, { ok: true }>
+  | { ok: false; error: string; values: AccountInviteValues }
+  | { ok: null };
+
+/** 사고조사관 초대. 조직은 슈퍼 관리자만 고르고, 조직 관리자는 서버가 자기 조직으로 고정한다. */
+export async function createInvestigatorInvitationAction(
+  _prev: InvestigatorInvitationState,
+  formData: FormData,
+): Promise<InvestigatorInvitationState> {
+  const values: AccountInviteValues = {
+    orgId: String(formData.get("orgId") ?? "").slice(0, 64),
+    name: String(formData.get("name") ?? "").slice(0, 50),
+    email: String(formData.get("email") ?? "").slice(0, 320),
+    expiresInHours: String(formData.get("expiresInHours") ?? "24"),
+  };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다. 다시 로그인해 주세요.", values };
+  if (!["12", "24", "72"].includes(values.expiresInHours)) return { ok: false, error: "유효 시간을 다시 선택해 주세요.", values };
+
+  const supabase = await createClient();
+  const result = await createInvestigatorInvitation(
+    supabase,
+    user,
+    { orgId: values.orgId || undefined, name: values.name, email: values.email, expiresInHours: values.expiresInHours },
+    getAppBaseUrl(),
+  );
+  if (!result.ok) {
+    await auditIfDenied(supabase, result.error, { action: "INVITATION_CREATE", targetType: "invitation", targetName: values.name });
+    return { ...result, values };
+  }
+  return result;
 }

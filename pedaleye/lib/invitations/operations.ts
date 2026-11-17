@@ -103,32 +103,40 @@ export async function createInvitation(
   };
 }
 
-// ── 조직 관리자 초대(슈퍼 관리자 전용) ───────────────────────────────────
+// ── 조직 관리자·사고조사관 초대(차량 없음) ─────────────────────────────
 
-export const createOrgAdminInvitationSchema = z.object({
-  orgId: z.guid("조직을 찾을 수 없습니다."),
-  name: z.string().trim().min(1, "관리자 이름을 입력해 주세요.").max(50),
+export const accountInvitationSchema = z.object({
+  orgId: z.guid("조직을 찾을 수 없습니다.").optional(),
+  name: z.string().trim().min(1, "이름을 입력해 주세요.").max(50),
   email: z.email("이메일 형식을 확인해 주세요.").transform((value) => value.toLowerCase()),
   expiresInHours: z.coerce.number().int().min(1).max(168).default(24),
 });
 
 /**
- * 조직 관리자(org_admin) 1회용 초대 링크. 차량은 붙이지 않는다.
- * 서버에서 슈퍼 관리자인지 확인하고, RLS(invitations_insert)가 한 번 더 막는다.
+ * 차량 없이 계정만 만드는 1회용 초대(조직 관리자·사고조사관).
+ * - 조직 관리자 초대: 슈퍼 관리자만
+ * - 사고조사관 초대: 슈퍼 관리자는 고른 조직, 조직 관리자는 요청과 무관하게 자기 조직
+ * 서버에서 확인하고 RLS(invitations_insert)가 한 번 더 막는다.
  */
-export async function createOrgAdminInvitation(
+async function createAccountInvitation(
   supabase: Client,
   user: Operator,
+  role: "org_admin" | "investigator",
   input: unknown,
   baseUrl: string,
 ): Promise<CreateInvitationResult> {
-  if (user.role !== "super_admin") return { ok: false, error: "조직 관리자를 초대할 권한이 없습니다." };
+  const denied = role === "org_admin" ? "조직 관리자를 초대할 권한이 없습니다." : "소속 조직에만 조사관을 초대할 수 있습니다.";
+  if (role === "org_admin" ? user.role !== "super_admin" : user.role !== "super_admin" && user.role !== "org_admin") {
+    return { ok: false, error: denied };
+  }
 
-  const parsed = createOrgAdminInvitationSchema.safeParse(input);
+  const parsed = accountInvitationSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
   }
-  const { orgId, name, email, expiresInHours } = parsed.data;
+  const { name, email, expiresInHours } = parsed.data;
+  const orgId = user.role === "org_admin" ? user.orgId : parsed.data.orgId;
+  if (!orgId) return { ok: false, error: "조직을 선택해 주세요." };
 
   const [org, existingUser, active] = await Promise.all([
     supabase.from("organizations").select("id").eq("id", orgId).maybeSingle(),
@@ -143,13 +151,15 @@ export async function createOrgAdminInvitation(
   ]);
   for (const failed of [org.error, existingUser.error, active.error]) {
     if (failed) {
-      console.error("createOrgAdminInvitation lookup failed", { code: failed.code });
+      console.error("createAccountInvitation lookup failed", { code: failed.code, role });
       return { ok: false, error: TEMPORARY_FAILURE };
     }
   }
   if (!org.data) return { ok: false, error: "조직을 찾을 수 없습니다." };
   if (existingUser.data) return { ok: false, error: "이미 가입된 이메일입니다. 다른 이메일로 초대해 주세요." };
-  if ((active.data ?? []).length > 0) return { ok: false, error: "이미 해당 이메일로 활성화된 초대가 존재합니다." };
+  if ((active.data ?? []).length > 0) {
+    return { ok: false, error: role === "investigator" ? "이미 초대 대기 중인 이메일입니다." : "이미 해당 이메일로 활성화된 초대가 존재합니다." };
+  }
 
   const token = generateInvitationToken();
   const expiresAt = new Date(Date.now() + expiresInHours * 3_600_000).toISOString();
@@ -158,18 +168,28 @@ export async function createOrgAdminInvitation(
     vehicle_id: null,
     email,
     invitee_name: name,
-    role: "org_admin",
+    role,
     token_hash: hashInvitationToken(token),
     expires_at: expiresAt,
     created_by: user.id,
   });
   if (insertError) {
-    if (insertError.code === "42501") return { ok: false, error: "조직 관리자를 초대할 권한이 없습니다." };
-    console.error("createOrgAdminInvitation insert failed", { code: insertError.code });
+    if (insertError.code === "42501") return { ok: false, error: denied };
+    console.error("createAccountInvitation insert failed", { code: insertError.code, role });
     return { ok: false, error: TEMPORARY_FAILURE };
   }
 
   return { ok: true, invitationUrl: `${baseUrl}/auth/invite?token=${token}`, expiresAt, expiresInHours };
+}
+
+/** 조직 관리자(org_admin) 1회용 초대 링크. 슈퍼 관리자 전용, 차량은 붙이지 않는다. */
+export function createOrgAdminInvitation(supabase: Client, user: Operator, input: unknown, baseUrl: string) {
+  return createAccountInvitation(supabase, user, "org_admin", input, baseUrl);
+}
+
+/** 사고조사관(investigator) 1회용 초대 링크. 소속 조직의 사고 기록 열람만 하며 차량은 붙이지 않는다. */
+export function createInvestigatorInvitation(supabase: Client, user: Operator, input: unknown, baseUrl: string) {
+  return createAccountInvitation(supabase, user, "investigator", input, baseUrl);
 }
 
 // ── 초대 조회(토큰 검증) ─────────────────────────────────────────────────

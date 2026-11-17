@@ -31,5 +31,7 @@ export async function POST(request: Request) {
     inviteeName: invitation.inviteeName,
     orgName: invitation.orgName,
     vehiclePlate: invitation.vehiclePlate,
+    // 앱은 운전자 전용: 조사관·관리자 초대는 웹에서 가입하도록 안내한다
+    role: invitation.role,
   });
 }

@@ -128,7 +128,7 @@ describe("재발급·목록", () => {
   it("조직 관리자 목록에는 자기 조직 운전자·조사관 초대만 보인다", async () => {
     await newDriverInvite("scope");
     const seoul = await listInvitations(await signedInClient("admin.seoul@pedaleye.test"), SEOUL_ADMIN, { ipage: 1 });
-    expect(seoul.items.every((i) => i.orgName === "서울택시" || i.orgName === null || i.role !== "org_admin")).toBe(true);
+    expect(seoul.items.every((i) => i.orgName === "서울법인택시" && i.role !== "org_admin")).toBe(true);
     const hw = await listInvitations(await signedInClient("admin.hwaseong@pedaleye.test"), HWASEONG_ADMIN, { ipage: 1 });
     expect(hw.items.every((i) => i.role === "driver" || i.role === "investigator")).toBe(true);
     expect(seoul.items.some((i) => i.vehiclePlate === "56다 1004")).toBe(false);

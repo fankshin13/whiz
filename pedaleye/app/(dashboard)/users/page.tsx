@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { RetryAlert } from "@/components/page/retry-alert";
 import { Section } from "@/components/page/section";
+import { InviteInvestigatorDialog } from "@/components/invitations/investigator-invite-dialog";
 import { ReissueInvitationDialog, RevokeInvitationDialog } from "@/components/invitations/invitation-dialogs";
 import { DeactivateUserDialog, ReactivateUserDialog } from "@/components/users/user-dialogs";
 import { ROLE_LABELS } from "@/lib/audit/labels";
@@ -72,6 +73,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             ? "모든 조직의 사용자를 조회하고 계정을 비활성화·재활성화합니다. 계정은 삭제하지 않아 사고 기록과 감사 기록이 보존됩니다."
             : `${orgs[0]?.name ?? "우리 조직"}의 운전자·사고조사관 계정을 관리합니다. 계정은 삭제하지 않고 비활성화합니다.`
         }
+        action={isSuper ? <InviteInvestigatorDialog organizations={orgs} /> : <InviteInvestigatorDialog fixedOrgName={orgs[0]?.name} />}
       />
       {notice && NOTICES[notice] ? (
         <p role="status" className="m-0 flex items-start gap-2 rounded-md border border-border-strong bg-good-bg px-4 py-3 font-semibold text-good">

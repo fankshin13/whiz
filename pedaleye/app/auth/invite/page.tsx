@@ -47,16 +47,19 @@ export default async function InvitePage({
   }
 
   const isOrgAdmin = invitation.role === "org_admin";
+  const isInvestigator = invitation.role === "investigator";
+  const heading = isOrgAdmin ? "페달아이 조직 관리자 등록" : isInvestigator ? "페달아이 사고조사관 등록" : "페달아이 운전자 온보딩";
+  const lead = isOrgAdmin
+    ? `${invitation.inviteeName}님, 비밀번호를 설정하면 ${invitation.orgName}의 조직 관리자로 바로 시작할 수 있습니다.`
+    : isInvestigator
+      ? `${invitation.inviteeName}님, 비밀번호를 설정하면 사고 이벤트 분석 화면으로 바로 이동합니다. 사고조사관 권한으로 등록됩니다.`
+      : `${invitation.inviteeName}님, 비밀번호를 설정하면 배정 차량과 함께 바로 시작할 수 있습니다.`;
 
   return (
     <>
       <div className="grid gap-2">
-        <h1 className="m-0 text-h1 font-bold">{isOrgAdmin ? "페달아이 조직 관리자 등록" : "페달아이 운전자 온보딩"}</h1>
-        <p className="m-0 text-text-muted">
-          {isOrgAdmin
-            ? `${invitation.inviteeName}님, 비밀번호를 설정하면 ${invitation.orgName}의 조직 관리자로 바로 시작할 수 있습니다.`
-            : `${invitation.inviteeName}님, 비밀번호를 설정하면 배정 차량과 함께 바로 시작할 수 있습니다.`}
-        </p>
+        <h1 className="m-0 text-h1 font-bold">{heading}</h1>
+        <p className="m-0 text-text-muted">{lead}</p>
       </div>
       <div className="card grid gap-6">
         <dl className="m-0 grid gap-3">
@@ -64,10 +67,12 @@ export default async function InvitePage({
             <dt className="text-caption font-medium text-text-muted">소속 조직</dt>
             <dd className="m-0 font-semibold">{invitation.orgName}</dd>
           </div>
-          {isOrgAdmin ? (
+          {isOrgAdmin || isInvestigator ? (
             <div className="grid gap-0.5">
               <dt className="text-caption font-medium text-text-muted">역할</dt>
-              <dd className="m-0 font-semibold">조직 관리자</dd>
+              <dd className="m-0 font-semibold" data-role-badge={invitation.role}>
+                {isOrgAdmin ? "조직 관리자" : "사고조사관 (사고 기록 열람 전용)"}
+              </dd>
             </div>
           ) : (
             <div className="grid gap-0.5">

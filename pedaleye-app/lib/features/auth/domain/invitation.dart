@@ -4,12 +4,18 @@ sealed class InvitationCheck {
 }
 
 class ValidInvitation extends InvitationCheck {
-  const ValidInvitation({required this.email, required this.inviteeName, required this.orgName, this.vehiclePlate});
+  const ValidInvitation({required this.email, required this.inviteeName, required this.orgName, this.vehiclePlate, this.role});
 
   final String email;
   final String inviteeName;
   final String orgName;
   final String? vehiclePlate;
+
+  /// 서버가 알려 주는 초대 역할. 이전 서버는 보내지 않는다(null = 운전자로 간주)
+  final String? role;
+
+  /// 운전자 앱에서 가입할 수 없는 초대(사고조사관·조직 관리자) → 웹에서 가입 안내
+  bool get webOnly => role != null && role != 'driver';
 }
 
 /// 없음·만료·이미 사용·관리자 취소. 취소만 따로 안내한다.

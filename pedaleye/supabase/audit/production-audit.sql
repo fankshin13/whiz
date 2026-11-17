@@ -7,7 +7,7 @@ with expected_tables(name) as (
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013')
+         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013'), ('20261117000014')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -109,6 +109,13 @@ select 'invitation_revoke_reissue',
        and not has_function_privilege('anon', 'public.revoke_invitation(uuid, text)', 'EXECUTE')
        and not has_function_privilege('anon', 'public.reissue_invitation(uuid, text, integer)', 'EXECUTE')
        and not has_table_privilege('authenticated', 'public.invitations', 'UPDATE'),
+       ''
+union all
+select 'investigator_invitations',
+       exists (select 1 from pg_constraint where conname = 'chk_invitation_vehicle_driver_only')
+       and position('investigator' in (select pg_get_constraintdef(oid) from pg_constraint where conname = 'chk_invitation_role')) > 0
+       and exists (select 1 from pg_policy where polname = 'invitations_insert'
+                   and pg_get_expr(polwithcheck, polrelid) like '%investigator%'),
        ''
 union all
 select 'database_timezone_asia_seoul',
