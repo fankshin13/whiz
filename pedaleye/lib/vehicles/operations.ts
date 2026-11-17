@@ -6,7 +6,6 @@ import type { Database } from "@/lib/supabase/database.types";
 
 type Client = SupabaseClient<Database>;
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
-type Device = Database["public"]["Tables"]["devices"]["Row"];
 type Operator = Pick<CurrentUser, "role" | "orgId">;
 
 export type OperationResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -44,11 +43,6 @@ export const upsertVehicleSchema = z.object({
     .optional(),
   vin_masked: optionalText(17, "차대번호는 17자 이하로 입력해 주세요."),
   assigned_user_id: z.guid().nullable().optional(),
-});
-
-export const bindDeviceSchema = z.object({
-  serial_number: z.string().trim().min(1).max(64),
-  vehicle_id: z.guid(),
 });
 
 function canManageVehicles(user: Operator): boolean {
@@ -111,60 +105,4 @@ export async function unassignDriver(supabase: Client, user: Operator, vehicleId
   }
   if (data.length === 0) return { ok: false, error: "차량을 찾을 수 없거나 관리 권한이 없습니다." };
   return { ok: true, data: null };
-}
-
-/** 단말을 차량에 1:1 장착. 이미 다른 차량에 장착된 단말·차량은 거부한다(단일 UPDATE 로 원자 처리). */
-export async function bindDeviceToVehicle(
-  supabase: Client,
-  user: Operator,
-  input: unknown,
-): Promise<OperationResult<Device>> {
-  if (!canManageVehicles(user)) return { ok: false, error: NO_PERMISSION };
-
-  const parsed = bindDeviceSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "단말 일련번호와 차량을 확인해 주세요." };
-  const { serial_number, vehicle_id } = parsed.data;
-
-  const { data: vehicle, error: vehicleError } = await supabase
-    .from("vehicles")
-    .select("id, org_id")
-    .eq("id", vehicle_id)
-    .maybeSingle();
-  if (vehicleError) {
-    console.error("bindDeviceToVehicle vehicle lookup failed", { code: vehicleError.code });
-    return { ok: false, error: TEMPORARY_FAILURE };
-  }
-  if (!vehicle || (user.role === "org_admin" && vehicle.org_id !== user.orgId)) {
-    return { ok: false, error: "차량을 찾을 수 없거나 관리 권한이 없습니다." };
-  }
-
-  const { data: device, error: deviceError } = await supabase
-    .from("devices")
-    .select("id, vehicle_id")
-    .eq("serial_number", serial_number)
-    .maybeSingle();
-  if (deviceError) {
-    console.error("bindDeviceToVehicle device lookup failed", { code: deviceError.code });
-    return { ok: false, error: TEMPORARY_FAILURE };
-  }
-  if (!device) return { ok: false, error: "단말을 찾을 수 없습니다. 일련번호를 확인해 주세요." };
-  if (device.vehicle_id !== null && device.vehicle_id !== vehicle_id) {
-    return { ok: false, error: "이미 다른 차량에 장착된 단말입니다." };
-  }
-
-  const { data: updated, error: updateError } = await supabase
-    .from("devices")
-    .update({ vehicle_id })
-    .eq("id", device.id)
-    .or(`vehicle_id.is.null,vehicle_id.eq.${vehicle_id}`)
-    .select()
-    .maybeSingle();
-
-  if (updateError) {
-    if (updateError.code === "23505") return { ok: false, error: "이 차량에는 이미 다른 단말이 장착되어 있습니다." };
-    console.error("bindDeviceToVehicle update failed", { code: updateError.code });
-    return { ok: false, error: TEMPORARY_FAILURE };
-  }
-  if (!updated) return { ok: false, error: "이미 다른 차량에 장착된 단말입니다." };
-  return { ok: true, data: updated };
 }

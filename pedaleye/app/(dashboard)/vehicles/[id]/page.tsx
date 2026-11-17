@@ -127,6 +127,11 @@ export default async function VehicleDetailPage({
               <SlidersHorizontal aria-hidden="true" size={18} />
               페달 캘리브레이션 시작
             </Link>
+            {canManage ? (
+              <Link href="/devices" className="inline-flex min-h-11 items-center justify-self-start font-semibold underline">
+                단말 교체·해제는 단말 관리에서
+              </Link>
+            ) : null}
           </div>
         ) : (
           <div className="grid gap-3">
@@ -141,6 +146,12 @@ export default async function VehicleDetailPage({
             <span id="no-device-note" className="text-caption text-text-muted">
               단말을 이 차량에 장착한 뒤 보정할 수 있습니다.
             </span>
+            {canManage ? (
+              <Link href="/devices?filter=inventory" className="btn justify-self-start">
+                <Cpu aria-hidden="true" size={18} />
+                단말 관리에서 장착하기
+              </Link>
+            ) : null}
           </div>
         )}
       </Section>

@@ -1,27 +1,29 @@
 "use client";
 
-import { AlertTriangle, Building2, Car, LayoutDashboard, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Building2, Car, Cpu, LayoutDashboard, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { isActivePath, type NavIconName, type NavItem } from "./nav-config";
+import { activeNavHref, type NavIconName, type NavItem } from "./nav-config";
 
 const ICONS: Record<NavIconName, LucideIcon> = {
   LayoutDashboard,
   Car,
   AlertTriangle,
   SlidersHorizontal,
+  Cpu,
   Building2,
 };
 
 export function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const activeHref = activeNavHref(pathname, items);
 
   return (
     <ul className="m-0 grid list-none gap-1 p-0">
       {items.map((item) => {
         const Icon = ICONS[item.iconName];
-        const active = isActivePath(pathname, item.href);
+        const active = item.href === activeHref;
         return (
           <li key={item.href}>
             <Link

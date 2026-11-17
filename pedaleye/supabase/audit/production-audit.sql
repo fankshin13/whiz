@@ -7,7 +7,7 @@ with expected_tables(name) as (
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008'), ('20261117000009')
+         ('20261117000008'), ('20261117000009'), ('20261117000010')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -56,6 +56,19 @@ union all
 select 'vehicle_plate_unique_index',
        exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'uq_vehicles_plate_normalized'),
        ''
+union all
+select 'device_org_inventory',
+       exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'devices' and column_name = 'org_id')
+       and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'mount_device'),
+       ''
+union all
+select 'mount_device_not_anon',
+       not coalesce(has_function_privilege('anon', 'public.mount_device(uuid, uuid, boolean)', 'execute'), false),
+       ''
+union all
+select 'devices_without_org',
+       not exists (select 1 from public.devices where org_id is null),
+       (select count(*)::text || '대: 슈퍼 관리자가 차량에 장착하면 그 조직으로 정해짐' from public.devices where org_id is null)
 union all
 select 'database_timezone_asia_seoul',
        current_setting('timezone') = 'Asia/Seoul',

@@ -25,17 +25,23 @@ export type Database = {
           Tables: {
             "devices": {
                   Row: {
-                    "accel_calib_max": number,"accel_calib_min": number,"brake_calib_max": number,"brake_calib_min": number,"created_at": string,"firmware_version": string,"hardware_rev": string,"id": string,"last_synced_at": string | null,"mac_address": string | null,"serial_number": string,"updated_at": string,"vehicle_id": string | null
+                    "accel_calib_max": number,"accel_calib_min": number,"brake_calib_max": number,"brake_calib_min": number,"created_at": string,"firmware_version": string,"hardware_rev": string,"id": string,"last_synced_at": string | null,"mac_address": string | null,"org_id": string | null,"serial_number": string,"updated_at": string,"vehicle_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accel_calib_max"?: number,"accel_calib_min"?: number,"brake_calib_max"?: number,"brake_calib_min"?: number,"created_at"?: string,"firmware_version"?: string,"hardware_rev"?: string,"id"?: string,"last_synced_at"?: string | null,"mac_address"?: string | null,"serial_number": string,"updated_at"?: string,"vehicle_id"?: string | null
+                    "accel_calib_max"?: number,"accel_calib_min"?: number,"brake_calib_max"?: number,"brake_calib_min"?: number,"created_at"?: string,"firmware_version"?: string,"hardware_rev"?: string,"id"?: string,"last_synced_at"?: string | null,"mac_address"?: string | null,"org_id"?: string | null,"serial_number": string,"updated_at"?: string,"vehicle_id"?: string | null
                   }
                   Update: {
-                    "accel_calib_max"?: number,"accel_calib_min"?: number,"brake_calib_max"?: number,"brake_calib_min"?: number,"created_at"?: string,"firmware_version"?: string,"hardware_rev"?: string,"id"?: string,"last_synced_at"?: string | null,"mac_address"?: string | null,"serial_number"?: string,"updated_at"?: string,"vehicle_id"?: string | null
+                    "accel_calib_max"?: number,"accel_calib_min"?: number,"brake_calib_max"?: number,"brake_calib_min"?: number,"created_at"?: string,"firmware_version"?: string,"hardware_rev"?: string,"id"?: string,"last_synced_at"?: string | null,"mac_address"?: string | null,"org_id"?: string | null,"serial_number"?: string,"updated_at"?: string,"vehicle_id"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "devices_org_id_fkey"
+      columns: ["org_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "devices_vehicle_id_fkey"
       columns: ["vehicle_id"]
 isOneToOne: true
@@ -169,6 +175,9 @@ isOneToOne: false
           Functions: {
             "accept_invitation":
 { Args: { "p_token_hash": string,"p_user_id": string }; Returns: Database["public"]['Enums']["user_role"]
+                           },
+"mount_device":
+{ Args: { "p_device_id": string,"p_replace"?: boolean,"p_vehicle_id": string }; Returns: Json
                            }
           }
           Enums: {
