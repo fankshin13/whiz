@@ -70,6 +70,31 @@ Android SDK 가 없는 환경에서는 `SKIP_APK=1 scripts/check.sh`.
 scripts/test-local-stack.sh
 ```
 
+## Play 스토어 배포(Play 앱 서명)
+
+실제 앱 서명 키는 Google 이 보관하고, 우리는 **업로드 키**만 PC 에 둔다. 업로드 키를 잃어버려도 Play Console 에서 재설정을 요청할 수 있다.
+
+1. 업로드 키 만들기(한 번만, PowerShell). `keytool` 은 빌드에 쓰는 JDK(`JAVA_HOME`)에 들어 있다.
+
+   ```powershell
+   New-Item -ItemType Directory -Force C:\keys | Out-Null
+   & "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore C:\keys\pedaleye-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+
+   비밀번호는 비밀번호 관리자에 저장하고, `.jks` 파일은 암호화한 별도 저장소에 백업한다. 둘 다 저장소·메신저·메일에 올리지 않는다.
+2. `android/key.properties` 만들기(저장소에 올라가지 않음, `.gitignore`)
+
+   ```properties
+   storeFile=C:/keys/pedaleye-upload.jks
+   storePassword=<키 저장소 비밀번호>
+   keyAlias=upload
+   keyPassword=<키 비밀번호>
+   ```
+3. 버전 올리기: `pubspec.yaml` 의 `version: 0.1.0+1` 에서 `+` 뒤 숫자(versionCode)는 **올릴 때마다 1 이상 커져야** 한다. 앞부분은 사용자에게 보이는 버전.
+4. AAB 빌드: `flutter build appbundle --release --dart-define-from-file=.env` → `build/app/outputs/bundle/release/app-release.aab`
+   - `key.properties` 가 없으면 AAB 빌드는 멈춘다(디버그 키로 서명된 파일이 업로드되는 것을 막음). 사내 테스트용 APK(`flutter build apk --release`)는 지금처럼 디버그 키로 만들어진다.
+5. Play Console → 앱 만들기 → **테스트 및 출시 → 내부 테스트** → 새 버전에 AAB 업로드(처음 업로드 때 Play 앱 서명 사용에 동의).
+
 ## 초대 API (웹 콘솔이 제공)
 앱에는 서버 비밀 키가 없으므로 초대 확인·계정 생성은 웹 서버가 합니다. 둘 다 IP 당 분당 요청 수를 제한합니다.
 
