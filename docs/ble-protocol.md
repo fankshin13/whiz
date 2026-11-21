@@ -1,8 +1,9 @@
-# 페달아이 단말 BLE 통신 규격 v1.0 (초안)
+# 페달아이 단말 BLE 통신 규격 v1.1 (초안)
 
 | 항목 | 내용 |
 | --- | --- |
-| 문서 상태 | 초안(2026-11-17). 하드웨어 업체 검토 후 확정 |
+| 문서 상태 | 초안(2026-11-17, v1.1 2026-11-21). 하드웨어 업체 검토 후 확정 |
+| 변경 이력 | v1.1: 위치정보 미수집 정책에 따라 GPS 위도·경도·속도 필드를 0 으로 고정(형식은 그대로) |
 | 대상 | 단말 펌웨어 개발자, 운전자 앱(Android) 개발자 |
 | 기준 구현 | `pedaleye-app/lib/core/ble/ble_protocol.dart` |
 | 시험 벡터 | `pedaleye-app/test/fixtures/ble_test_vectors.json` (생성기: `pedaleye-app/tool/generate_ble_vectors.mjs`) |
@@ -58,7 +59,7 @@
 | UUID 끝 8자리 | 이름 | 속성 | 보안 | 크기 | 형식 |
 | --- | --- | --- | --- | --- | --- |
 | **0001 0000** | **Device Info 서비스** | | | | |
-| 0001 0001 | Protocol Version | Read | Open | 2 | u16, `0x0100` = v1.0 (상위 바이트 = 주 버전) |
+| 0001 0001 | Protocol Version | Read | Open | 2 | u16, `0x0101` = v1.1 (상위 바이트 = 주 버전) |
 | 0001 0002 | Serial Number | Read | Open | ≤16 | UTF-8, 예 `PE-2026-000001` |
 | 0001 0003 | Hardware Rev | Read | Open | ≤16 | UTF-8, 예 `v1.0` |
 | 0001 0004 | Firmware Version | Read | Open | ≤16 | UTF-8, 예 `1.0.0` |
@@ -153,11 +154,13 @@ sequenceDiagram
 | 17 | 1 | Brake_Percentage | u8, 0~100 |
 | 18 | 1 | Both_Pedal_Flag | u8, 0/1 |
 | 19 | 1 | 예약 | 0 |
-| 20 | 4 | GPS_Latitude | i32, 1e-7° |
-| 24 | 4 | GPS_Longitude | i32, 1e-7° |
-| 28 | 2 | GPS_Speed | u16, 0.1km/h |
+| 20 | 4 | GPS_Latitude | i32, **항상 0**(v1.1) |
+| 24 | 4 | GPS_Longitude | i32, **항상 0**(v1.1) |
+| 28 | 2 | GPS_Speed | u16, **항상 0**(v1.1) |
 | 30 | 2 | 예약 | 0 |
 | 32 | 32 | Prev_Record_Hash | 직전 패킷의 SHA-256 |
+
+> **위치정보 미수집(v1.1)**: 단말은 GPS 수신기를 두지 않거나 꺼 두고, 위 세 필드를 항상 0 으로 쓴다. 서버는 0 이 아닌 값이 하나라도 있는 기록을 받지 않는다(HTTP 400). 이때 앱은 `CONFIRM_ARCHIVED` 를 보내지 않으므로 기록은 단말에 남는다.
 
 해시 체인
 - `H(-1) = SHA-256("PEDAL_EYE_GENESIS_" + 일련번호 + "_" + 첫 패킷 시각(ms, 10진수))`
@@ -298,5 +301,6 @@ ATT 응용 오류와 Transfer Status 오류 칸에 같이 쓴다.
 - [ ] 암호화되지 않은 링크·인증 전 접근 거부(0x05/0x80)
 - [ ] MTU 247 수락, 67 미만 연결에서 실시간 알림을 보내지 않는다
 - [ ] 개인키를 어떤 경로로도 내보내지 않는다(디버그 포트 잠금 포함)
+- [ ] GPS 위도·경도·속도 필드를 항상 0 으로 쓴다(위치정보 미수집, v1.1)
 - [ ] CONFIRM_ARCHIVED 전에는 세션을 지우지 않는다
 - [ ] 전원 차단 중에도 동결된 사고 기록이 손상되지 않는다(쓰기 완료 후 서명·목록 반영)

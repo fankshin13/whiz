@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 
-import { EVENT_LOG_BUCKET, uploadEventSession } from "@/lib/events/upload";
+import { EVENT_LOG_BUCKET, LOCATION_REJECTED, uploadEventSession } from "@/lib/events/upload";
 import { buildChainedSession } from "@/lib/telemetry/hash-chain-engine";
 import type { PacketPayload } from "@/lib/telemetry/packet-codec";
 
@@ -17,7 +17,7 @@ const INVESTIGATOR = { id: "20000000-0000-0000-0000-000000000005", role: "invest
 const BASE = Date.UTC(2026, 10, 15, 1, 0, 0) + (Date.now() % 100_000) * 1000; // 실행마다 다른 시각
 const created: string[] = [];
 
-async function session(deviceId: string, startMs: number, count = 1200) {
+async function session(deviceId: string, startMs: number, count = 1200, gps = false) {
   const payloads: PacketPayload[] = Array.from({ length: count }, (_, i) => ({
     sequenceId: i,
     timestampMs: startMs + i * 50,
@@ -26,9 +26,9 @@ async function session(deviceId: string, startMs: number, count = 1200) {
     brakeDistance: i >= 600 ? 9500 : 13000,
     brakePercent: i >= 600 ? 100 : 0,
     bothPedal: false,
-    latitudeE7: 375665000,
-    longitudeE7: 1269780000,
-    speedDeciKmh: i >= 600 ? 0 : 500,
+    latitudeE7: gps ? 375665000 : 0,
+    longitudeE7: gps ? 1269780000 : 0,
+    speedDeciKmh: 0,
   }));
   const bytes = await buildChainedSession(deviceId, payloads);
   return {
@@ -53,6 +53,20 @@ afterAll(async () => {
 });
 
 describe("사고 세션 업로드", () => {
+  it("위치(GPS) 값이 담긴 기록은 받지 않고 아무것도 저장하지 않는다(위치정보 미수집)", async () => {
+    const driver = await signedInClient("driver.a@pedaleye.test");
+    const start = BASE + 7_200_000;
+    const { input } = await session(DEVICE_A, start, 100, true);
+    const result = await uploadEventSession(driver, adminClient(), DRIVER_A, input());
+    expect(result).toEqual({ success: false, status: 400, error: LOCATION_REJECTED });
+    const { count } = await adminClient()
+      .from("event_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("device_id", DEVICE_A)
+      .eq("start_time", new Date(start).toISOString());
+    expect(count).toBe(0);
+  });
+
   it("배정 운전자가 올린 정상 세션은 검증 통과로 저장되고, 본인이 조회·다운로드할 수 있다", async () => {
     const driver = await signedInClient("driver.a@pedaleye.test");
     const { input } = await session(DEVICE_A, BASE);

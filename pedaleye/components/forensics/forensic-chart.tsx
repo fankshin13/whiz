@@ -299,10 +299,7 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
               <span className="tabular-nums">
                 제동 {point.brake}% · {point.brakeMm.toFixed(2)}mm
               </span>
-              <span className="tabular-nums">차속 {point.speed.toFixed(1)}km/h</span>
-              <span className="tabular-nums text-text-muted">
-                GPS {point.lat.toFixed(7)}, {point.lon.toFixed(7)}
-              </span>
+              {point.speed > 0 ? <span className="tabular-nums">차속 {point.speed.toFixed(1)}km/h</span> : null}
               {point.dual ? <span className="font-semibold">양발 동시 조작</span> : null}
             </div>
           ) : null}

@@ -14,7 +14,7 @@ import '../forensics/packet_codec.dart' show packetSize;
 
 // ── 버전·UUID ──────────────────────────────────────────────────────────
 
-const bleProtocolVersion = 0x0100; // v1.0 (상위 바이트 = 주 버전)
+const bleProtocolVersion = 0x0101; // v1.1 (상위 바이트 = 주 버전). 1.1: GPS 필드 0 고정(위치정보 미수집)
 
 /// 128비트 UUID: 50454441-4C45-5945-494F-5431SSSSCCCC (SSSS 서비스, CCCC 특성, 서비스 자신은 0000)
 String peUuid(int service, [int characteristic = 0]) =>

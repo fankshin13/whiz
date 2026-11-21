@@ -9,8 +9,6 @@ export interface ChartPoint {
   accelMm: number;
   brakeMm: number;
   speed: number;
-  lat: number;
-  lon: number;
   dual: boolean;
   hash: string;
 }
@@ -24,8 +22,6 @@ export function toChartPoints(packets: readonly DecodedPacket[]): ChartPoint[] {
     accelMm: p.accelDistanceMm,
     brakeMm: p.brakeDistanceMm,
     speed: p.speedKmh,
-    lat: p.latitude,
-    lon: p.longitude,
     dual: p.bothPedalFlag,
     hash: p.calculatedHash,
   }));

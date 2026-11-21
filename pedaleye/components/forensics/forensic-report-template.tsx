@@ -152,7 +152,7 @@ export function ForensicReportTemplate({ report, qrSvg, verifyUrl }: { report: F
               ["최대 가속 페달 답력", `${s.maxAccelPercent}%`],
               ["최대 제동 페달 답력", `${s.maxBrakePercent}%`],
               ["양발 동시 답입 지속", `${s.dualPressDurationSeconds}초`],
-              ["트리거 시점 차속", `${s.speedAtTriggerKmh.toFixed(1)}km/h`],
+              ["트리거 시점 차속", s.maxSpeedKmh > 0 ? `${s.speedAtTriggerKmh.toFixed(1)}km/h` : "미기록"],
             ].map(([label, value]) => (
               <div key={label} className="grid gap-0.5 rounded-md border border-border-strong p-2">
                 <dt className="text-[8pt] text-text-muted">{label}</dt>

@@ -8,6 +8,8 @@ import { genesisSubject, sealMessage, verifySeal } from "@/lib/events/device-sea
 import { computeGenesisHash, toHex, verifyBinaryHashChain } from "@/lib/telemetry/hash-chain-engine";
 import { HASH_SIZE, PACKET_SIZE, decodePacketRecord } from "@/lib/telemetry/packet-codec";
 
+export const LOCATION_REJECTED = "위치 정보(GPS)가 담긴 기록은 받지 않습니다. 단말 펌웨어가 규격 v1.1(GPS 0 고정)인지 확인해 주세요.";
+
 type Client = SupabaseClient<Database>;
 type Operator = Pick<CurrentUser, "id" | "role" | "orgId">;
 
@@ -80,6 +82,14 @@ export async function uploadEventSession(
     return { success: false, status: 400, error: "로그 파일 길이가 64바이트 패킷 규격과 맞지 않습니다." };
   }
   const recordCount = body / PACKET_SIZE;
+  // 위치정보 미수집(규격 v1.1): GPS 위도·경도·속도는 0 이어야 한다. 서명된 기록은 고칠 수 없으므로 받지 않는다
+  // (거부되면 앱은 보관 확인을 보내지 않아 단말에 기록이 그대로 남는다).
+  for (let i = 0; i < recordCount; i++) {
+    const record = decodePacketRecord(bytes, i * PACKET_SIZE);
+    if (record.latitudeE7 !== 0 || record.longitudeE7 !== 0 || record.speedDeciKmh !== 0) {
+      return { success: false, status: 400, error: LOCATION_REJECTED };
+    }
+  }
   const firstMs = decodePacketRecord(bytes, 0).timestampMs;
   const lastMs = decodePacketRecord(bytes, (recordCount - 1) * PACKET_SIZE).timestampMs;
   if (
