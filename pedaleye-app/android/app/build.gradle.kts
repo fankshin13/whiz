@@ -1,7 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Play 업로드 키(Play 앱 서명 사용). android/key.properties 는 PC 에만 두고 저장소에 올리지 않는다(.gitignore).
+// 파일이 없으면 release 도 디버그 키로 서명한다(사내 테스트 APK). 단, Play 업로드용 AAB 는 키 없이 만들지 않는다.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) FileInputStream(keystorePropertiesFile).use { load(it) }
+}
+val hasUploadKey = keystorePropertiesFile.exists()
+if (!hasUploadKey && gradle.startParameter.taskNames.any { it.contains("bundleRelease", ignoreCase = true) }) {
+    throw GradleException("android/key.properties 가 없어 Play 업로드용 AAB 를 만들 수 없습니다. README 의 'Play 스토어 배포' 절차로 업로드 키를 먼저 만드세요.")
 }
 
 android {
@@ -15,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Play 스토어 등록 후에는 바꿀 수 없다
         applicationId = "kr.pedaleye.pedaleye_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -30,11 +44,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("upload") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (hasUploadKey) "upload" else "debug")
         }
     }
 }
