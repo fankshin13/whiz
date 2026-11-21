@@ -26,3 +26,10 @@ export function getCronSecret(): string | null {
 export function getCronHeartbeatUrl(): string | null {
   return validateServerEnv().CRON_HEARTBEAT_URL ?? null;
 }
+
+/** 개인정보처리방침 게시 정보. 하나라도 없으면 null(페이지는 '준비 중'). */
+export function getPrivacyInfo(): { controller: string; officer: string; contact: string; effectiveDate: string } | null {
+  const env = validateServerEnv();
+  if (!env.PRIVACY_CONTROLLER || !env.PRIVACY_OFFICER || !env.PRIVACY_CONTACT || !env.PRIVACY_EFFECTIVE_DATE) return null;
+  return { controller: env.PRIVACY_CONTROLLER, officer: env.PRIVACY_OFFICER, contact: env.PRIVACY_CONTACT, effectiveDate: env.PRIVACY_EFFECTIVE_DATE };
+}

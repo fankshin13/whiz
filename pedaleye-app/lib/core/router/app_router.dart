@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/account_deletion_screen.dart';
 import '../../features/auth/application/session_controller.dart';
 import '../../features/auth/presentation/invite_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -16,7 +17,7 @@ import '../../features/shell/presentation/app_shell.dart';
 
 const _signedOutPaths = {'/login', '/invite'};
 bool _isDriverPath(String path) =>
-    const {'/home', '/calibrate', '/gauge', '/records', '/settings/sensor'}.contains(path) || path.startsWith('/records/');
+    const {'/home', '/calibrate', '/gauge', '/records', '/settings/sensor', '/account/delete'}.contains(path) || path.startsWith('/records/');
 
 /// 딥링크 pedaleye://invite?token=… 는 호스트가 'invite' 라 경로로 바꿔 준다.
 /// 웹 초대 주소(…/auth/invite?token=…)를 앱 링크로 받는 경우도 같은 화면으로 보낸다.
@@ -66,6 +67,7 @@ GoRouter createRouter(SessionController session) {
       // 주행 중 화면: 탭 바 없이 전체 화면
       GoRoute(path: '/gauge', builder: (context, state) => const PedalGaugeScreen()),
       GoRoute(path: '/settings/sensor', builder: (context, state) => const SensorSettingsScreen()),
+      GoRoute(path: '/account/delete', builder: (context, state) => const AccountDeletionScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [

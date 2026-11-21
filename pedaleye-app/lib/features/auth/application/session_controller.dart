@@ -40,6 +40,26 @@ class SessionController extends ChangeNotifier {
   }
   String? get userId => _userId;
 
+  /// 본인이 계정 삭제를 요청해 로그아웃됨(로그인 화면이 한 번 안내하고 지움)
+  bool _accountDeletionRequested = false;
+  bool takeAccountDeletionRequested() {
+    final value = _accountDeletionRequested;
+    _accountDeletionRequested = false;
+    return value;
+  }
+
+  /// 계정 삭제 요청. 성공하면 로그아웃되고 라우터가 로그인 화면으로 보낸다.
+  Future<void> requestAccountDeletion({required String password, String? reason}) async {
+    // 로그아웃 알림보다 먼저 표시해 두어야 로그인 화면이 안내를 띄운다
+    _accountDeletionRequested = true;
+    try {
+      await _auth.requestAccountDeletion(password: password, reason: reason);
+    } catch (_) {
+      _accountDeletionRequested = false;
+      rethrow;
+    }
+  }
+
   Future<void> start() async {
     _subscription = _auth.userIdChanges().listen(_onUserChanged);
     await _onUserChanged(_auth.currentUserId);

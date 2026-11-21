@@ -11,6 +11,12 @@ const valid = {
 };
 
 describe("validateServerEnv", () => {
+  it("개인정보처리방침 게시 정보는 선택이며 시행일은 날짜 형식이어야 한다", () => {
+    expect(validateServerEnv({ ...valid, PRIVACY_EFFECTIVE_DATE: "2026-12-01" }).PRIVACY_EFFECTIVE_DATE).toBe("2026-12-01");
+    expect(validateServerEnv({ ...valid, PRIVACY_CONTROLLER: "" }).PRIVACY_CONTROLLER).toBeUndefined();
+    expect(() => validateServerEnv({ ...valid, PRIVACY_EFFECTIVE_DATE: "12/01/2026" })).toThrow(/PRIVACY_EFFECTIVE_DATE/);
+  });
+
   it("CRON_SECRET 은 선택이며, 빈 값은 미설정으로 보고 짧은 값은 막는다", () => {
     expect(validateServerEnv(valid).CRON_SECRET).toBeUndefined();
     expect(validateServerEnv({ ...valid, CRON_SECRET: "" }).CRON_SECRET).toBeUndefined();

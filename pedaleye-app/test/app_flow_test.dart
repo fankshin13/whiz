@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pedaleye_app/features/auth/presentation/account_deletion_screen.dart';
 import 'package:pedaleye_app/features/auth/presentation/invite_screen.dart';
 import 'package:pedaleye_app/features/auth/presentation/login_screen.dart';
 import 'package:pedaleye_app/features/auth/presentation/not_driver_screen.dart';
@@ -69,6 +70,42 @@ void main() {
         await pumpApp(tester, auth: auth);
         expect(find.byType(HomeScreen), findsNothing);
         expect(find.text(keepAll(deactivatedMessage)), findsOneWidget);
+      });
+
+      testWidgets('계정 삭제 요청: 비밀번호·확인 문구 확인 후 로그아웃되고 로그인 화면에 접수 안내', (tester) async {
+        if (narrow) useNarrowPhone(tester);
+        final auth = fakeAuth(signedInAs: driverId);
+        await pumpApp(tester, auth: auth);
+        await tester.scrollUntilVisible(find.text('계정 삭제 요청'), 200);
+        await tester.tap(find.text('계정 삭제 요청'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AccountDeletionScreen), findsOneWidget);
+
+        final submit = find.widgetWithText(FilledButton, '계정 삭제 요청');
+        // 확인 문구가 틀리면 보내지 않는다
+        await tester.enterText(field('비밀번호(본인 확인)'), password);
+        await tester.enterText(field('확인 문구 입력'), '삭제');
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(auth.deletionRequests, 0);
+
+        // 비밀번호가 틀리면 안내만
+        await tester.enterText(field('비밀번호(본인 확인)'), 'wrong-password');
+        await tester.enterText(field('확인 문구 입력'), accountDeletionConfirmPhrase);
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(find.text(keepAll('비밀번호가 올바르지 않습니다.')), findsOneWidget);
+        expect(auth.deletionRequests, 0);
+
+        await tester.enterText(field('비밀번호(본인 확인)'), password);
+        await tester.ensureVisible(submit);
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(auth.deletionRequests, 1);
+        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(find.text(deletionRequestedMessage), findsOneWidget);
       });
 
       testWidgets('관리자 로그인은 운전자 전용 안내로 격리되고 홈 데이터를 읽지 않는다', (tester) async {

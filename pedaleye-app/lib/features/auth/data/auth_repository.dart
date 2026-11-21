@@ -22,6 +22,14 @@ class AccountDeactivatedException implements Exception {
   const AccountDeactivatedException();
 }
 
+enum AccountDeletionFailure { wrongPassword, alreadyInactive, notAllowed, network, unknown }
+
+/// 계정 삭제 요청 실패(비밀번호 확인 실패, 이미 비활성 등)
+class AccountDeletionException implements Exception {
+  const AccountDeletionException(this.failure);
+  final AccountDeletionFailure failure;
+}
+
 /// 인증과 역할 조회. 화면·상태 관리 코드는 Supabase 를 직접 모르도록 이 인터페이스만 쓴다.
 abstract interface class AuthRepository {
   String? get currentUserId;
@@ -32,6 +40,9 @@ abstract interface class AuthRepository {
   Future<void> signIn({required String email, required String password});
 
   Future<void> signOut();
+
+  /// 본인 계정 삭제 요청: 비밀번호로 다시 확인한 뒤 서버가 즉시 비활성화하고, 이 기기에서 로그아웃한다.
+  Future<void> requestAccountDeletion({required String password, String? reason});
 
   /// public.users 에서 본인 역할을 읽는다(RLS: 본인 행만 보임).
   /// 비활성화된 계정이면 [AccountDeactivatedException].
@@ -70,6 +81,39 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() => _client.auth.signOut(scope: SignOutScope.local);
+
+  @override
+  Future<void> requestAccountDeletion({required String password, String? reason}) async {
+    final email = _client.auth.currentUser?.email;
+    if (email == null) throw const AccountDeletionException(AccountDeletionFailure.unknown);
+    try {
+      await _client.auth.signInWithPassword(email: email, password: password);
+    } on AuthRetryableFetchException {
+      throw const AccountDeletionException(AccountDeletionFailure.network);
+    } on AuthApiException catch (error) {
+      throw AccountDeletionException(
+        error.code == 'user_banned' ? AccountDeletionFailure.alreadyInactive : AccountDeletionFailure.wrongPassword,
+      );
+    } on SocketException {
+      throw const AccountDeletionException(AccountDeletionFailure.network);
+    } on TimeoutException {
+      throw const AccountDeletionException(AccountDeletionFailure.network);
+    }
+    try {
+      final trimmed = reason?.trim();
+      await _client.rpc<dynamic>('request_account_deletion', params: {'p_reason': (trimmed == null || trimmed.isEmpty) ? null : trimmed});
+    } on PostgrestException catch (error) {
+      throw AccountDeletionException(switch (error.message) {
+        final m when m.contains('ALREADY_INACTIVE') => AccountDeletionFailure.alreadyInactive,
+        final m when m.contains('SUPER_ADMIN_SELF') => AccountDeletionFailure.notAllowed,
+        _ => AccountDeletionFailure.unknown,
+      });
+    } on SocketException {
+      throw const AccountDeletionException(AccountDeletionFailure.network);
+    }
+    // 서버가 이미 모든 세션을 폐기했다. 이 기기의 세션 기억만 지운다
+    await signOut();
+  }
 
   @override
   Future<UserRole> fetchRole(String userId) async {

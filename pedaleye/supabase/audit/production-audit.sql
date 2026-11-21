@@ -7,7 +7,7 @@ with expected_tables(name) as (
 expected_migrations(version) as (
   values ('20261115000001'), ('20261115000002'), ('20261115000003'), ('20261115000004'),
          ('20261115000005'), ('20261115000006'), ('20261115000007'),
-         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013'), ('20261117000014'), ('20261117000015'), ('20261117000016'), ('20261117000017'), ('20261121000018')
+         ('20261117000008'), ('20261117000009'), ('20261117000010'), ('20261117000011'), ('20261117000012'), ('20261117000013'), ('20261117000014'), ('20261117000015'), ('20261117000016'), ('20261117000017'), ('20261121000018'), ('20261121000019')
 )
 select 'table:' || e.name as check_item,
        (t.tablename is not null) as ok,
@@ -147,6 +147,12 @@ select 'audit_log_retention',
        and not has_function_privilege('authenticated', 'public.purge_archived_audit_logs(uuid, uuid)', 'EXECUTE')
        and not has_function_privilege('authenticated', 'public.register_audit_archive(timestamptz, integer, text, integer, text, uuid)', 'EXECUTE'),
        '비공개 버킷 audit-archives, 삭제 함수는 서버 전용'
+union all
+select 'account_deletion_request',
+       exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'users' and column_name = 'deletion_requested_at')
+       and has_function_privilege('authenticated', 'public.request_account_deletion(text)', 'EXECUTE')
+       and not has_function_privilege('anon', 'public.request_account_deletion(text)', 'EXECUTE'),
+       ''
 union all
 select 'database_timezone_asia_seoul',
        current_setting('timezone') = 'Asia/Seoul',
