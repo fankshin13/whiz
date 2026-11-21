@@ -147,12 +147,11 @@ export function ForensicReportTemplate({ report, qrSvg, verifyUrl }: { report: F
 
         <div className="grid gap-1">
           <h2 className="m-0 text-[11pt] font-bold">3. 핵심 거동 통계</h2>
-          <dl className="m-0 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <dl className="m-0 grid grid-cols-1 gap-2 sm:grid-cols-3">
             {[
               ["최대 가속 페달 답력", `${s.maxAccelPercent}%`],
               ["최대 제동 페달 답력", `${s.maxBrakePercent}%`],
               ["양발 동시 답입 지속", `${s.dualPressDurationSeconds}초`],
-              ["트리거 시점 차속", s.maxSpeedKmh > 0 ? `${s.speedAtTriggerKmh.toFixed(1)}km/h` : "미기록"],
             ].map(([label, value]) => (
               <div key={label} className="grid gap-0.5 rounded-md border border-border-strong p-2">
                 <dt className="text-[8pt] text-text-muted">{label}</dt>

@@ -20,7 +20,7 @@ export function PacketGrid({ points, highlightSeq }: { points: readonly ChartPoi
         <table className="w-full min-w-[720px] border-collapse text-left text-caption tabular-nums">
           <thead className="bg-bg-panel">
             <tr>
-              {["시퀀스", "시각(서울)", "가속", "제동", "양발", "차속", "패킷 해시"].map((label) => (
+              {["시퀀스", "시각(서울)", "가속", "제동", "양발", "패킷 해시"].map((label) => (
                 <th key={label} scope="col" className="border-b border-border px-3 py-2 font-semibold">
                   {label}
                 </th>
@@ -35,7 +35,6 @@ export function PacketGrid({ points, highlightSeq }: { points: readonly ChartPoi
                 <td className="px-3 py-1.5">{p.accel}%</td>
                 <td className="px-3 py-1.5">{p.brake}%</td>
                 <td className="px-3 py-1.5">{p.dual ? "동시" : "-"}</td>
-                <td className="px-3 py-1.5">{p.speed.toFixed(1)}</td>
                 <td className="px-3 py-1.5 font-mono">{shortHash(p.hash)}</td>
               </tr>
             ))}

@@ -6,14 +6,13 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import type { ChartPoint } from "./chart-point";
 
 /*
- * 포렌식 시계열 차트. 페달 답입률(0~100%)과 차속(km/h)은 단위가 달라 한 축에 겹치지 않고
- * 위아래 두 패널로 나눈 뒤 같은 시간축·커서를 공유한다(이중 축 금지).
+ * 포렌식 시계열 차트. 가속·제동 페달 답입률(0~100%)을 시간축에 그린다.
+ * 차속은 위치정보 미수집(BLE 규격 v1.1)으로 기록하지 않아 표시하지 않는다.
  * 드래그로 구간 확대, 버튼·키보드(←/→ 커서, +/− 확대·축소, 0 전체)로 조작한다.
  */
 
 const PAD = { left: 44, right: 16, top: 12, bottom: 8 };
 const PEDAL_H = 220;
-const SPEED_H = 110;
 const AXIS_H = 28;
 const GAP = 16;
 const MIN_WIDTH = 560;
@@ -56,12 +55,9 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
   const t1 = visible[visible.length - 1]?.t ?? t0 + 1;
   const x = (t: number) => PAD.left + ((t - t0) / Math.max(1, t1 - t0)) * plotW;
   const pedalTop = PAD.top;
-  const speedTop = pedalTop + PEDAL_H + GAP;
-  const axisTop = speedTop + SPEED_H;
+  const axisTop = pedalTop + PEDAL_H + GAP;
   const height = axisTop + AXIS_H + PAD.bottom;
-  const maxSpeed = Math.max(10, Math.ceil(Math.max(...visible.map((p) => p.speed), 0) / 10) * 10);
   const yPedal = (v: number) => pedalTop + PEDAL_H - (v / 100) * PEDAL_H;
-  const ySpeed = (v: number) => speedTop + SPEED_H - (v / maxSpeed) * SPEED_H;
 
   // 양발 동시 조작 연속 구간
   const dualBands = useMemo(() => {
@@ -203,7 +199,7 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
               setDrag(null);
             }}
             role="img"
-            aria-label="가속·제동 페달 답입률과 차속 시계열"
+            aria-label="가속·제동 페달 답입률 시계열"
           >
             {/* 양발 구간 배경(두 패널 공통) */}
             {dualBands.map(([a, b]) => (
@@ -232,20 +228,6 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
             </text>
             <path d={linePath(visible, (p) => x(p.t), (p) => yPedal(p.accel))} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-accel" />
             <path d={linePath(visible, (p) => x(p.t), (p) => yPedal(p.brake))} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-brake" />
-
-            {/* 차속 패널 */}
-            {[0, maxSpeed / 2, maxSpeed].map((v) => (
-              <g key={v}>
-                <line x1={PAD.left} x2={width - PAD.right} y1={ySpeed(v)} y2={ySpeed(v)} className="stroke-border" strokeWidth={1} />
-                <text x={PAD.left - 6} y={ySpeed(v) + 4} textAnchor="end" className="fill-text-muted text-[11px] tabular-nums">
-                  {v}
-                </text>
-              </g>
-            ))}
-            <text x={PAD.left} y={speedTop - 2} className="fill-text-muted text-[11px] font-semibold">
-              차속(km/h)
-            </text>
-            <path d={linePath(visible, (p) => x(p.t), (p) => ySpeed(p.speed))} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-text-muted" />
 
             {/* 시간축 */}
             {xTicks.map((t, i) => (
@@ -278,7 +260,6 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
                 <line x1={x(point.t)} x2={x(point.t)} y1={pedalTop} y2={axisTop} className="stroke-text-main" strokeWidth={1} />
                 <circle cx={x(point.t)} cy={yPedal(point.accel)} r={4} className="fill-accel stroke-bg-base" strokeWidth={2} />
                 <circle cx={x(point.t)} cy={yPedal(point.brake)} r={4} className="fill-brake stroke-bg-base" strokeWidth={2} />
-                <circle cx={x(point.t)} cy={ySpeed(point.speed)} r={4} className="fill-text-muted stroke-bg-base" strokeWidth={2} />
               </g>
             ) : null}
           </svg>
@@ -299,7 +280,6 @@ export function ForensicChart({ points }: { points: readonly ChartPoint[] }) {
               <span className="tabular-nums">
                 제동 {point.brake}% · {point.brakeMm.toFixed(2)}mm
               </span>
-              {point.speed > 0 ? <span className="tabular-nums">차속 {point.speed.toFixed(1)}km/h</span> : null}
               {point.dual ? <span className="font-semibold">양발 동시 조작</span> : null}
             </div>
           ) : null}
