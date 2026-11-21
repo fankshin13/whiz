@@ -3,16 +3,14 @@ import type { ForensicReportData } from "@/types/forensic-report";
 /*
  * A4 인쇄용 순수 SVG 차트(벡터, 확대해도 깨지지 않음). 흑백 출력에서도 구분되게
  * 가속 = 청색 파선 + 세모 표식, 제동 = 적색 굵은 실선 + 네모 표식, 양발 구간 = 주황 빗금.
- * 차속은 단위가 달라 아래 패널로 분리(보조 Y축을 겹치지 않음).
+ * 차속은 위치정보 미수집(BLE 규격 v1.1)으로 기록하지 않아 그리지 않는다.
  */
 const W = 720;
 const L = 40;
 const R = 12;
 const PEDAL_TOP = 14;
 const PEDAL_H = 190;
-const SPEED_TOP = PEDAL_TOP + PEDAL_H + 22;
-const SPEED_H = 70;
-const AXIS_Y = SPEED_TOP + SPEED_H;
+const AXIS_Y = PEDAL_TOP + PEDAL_H + 8;
 const H = AXIS_Y + 22;
 const MARKERS = 12;
 
@@ -24,15 +22,13 @@ export function ForensicVectorChart({ report }: { report: ForensicReportData }) 
   const t1 = points[points.length - 1]?.timestampUtc ?? t0 + 1;
   const x = (t: number) => L + ((t - t0) / Math.max(1, t1 - t0)) * (W - L - R);
   const yP = (v: number) => PEDAL_TOP + PEDAL_H - (v / 100) * PEDAL_H;
-  const maxSpeed = Math.max(10, Math.ceil(report.statistics.maxSpeedKmh / 10) * 10);
-  const yS = (v: number) => SPEED_TOP + SPEED_H - (v / maxSpeed) * SPEED_H;
   const path = (y: (i: number) => number) => points.map((p, i) => `${i ? "L" : "M"}${x(p.timestampUtc).toFixed(1)},${y(i).toFixed(1)}`).join("");
   const markerIdx = Array.from({ length: MARKERS }, (_, k) => Math.round((k / (MARKERS - 1)) * (points.length - 1)));
   const tT = report.triggerTimeMs;
   const ticks = Array.from({ length: 7 }, (_, i) => t0 + ((t1 - t0) * i) / 6);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="사고 전후 페달 답입률과 차속 시계열 그래프" data-report-chart>
+    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="사고 전후 페달 답입률 시계열 그래프" data-report-chart>
       <defs>
         <pattern id="dual-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="6" height="6" className="fill-dual-warning/25" />
@@ -72,24 +68,6 @@ export function ForensicVectorChart({ report }: { report: ForensicReportData }) 
         );
       })}
 
-      {[0, maxSpeed / 2, maxSpeed].map((v) => (
-        <g key={v}>
-          <line x1={L} x2={W - R} y1={yS(v)} y2={yS(v)} className="stroke-border" strokeWidth={0.75} />
-          <text x={L - 5} y={yS(v) + 3} textAnchor="end" className="fill-text-muted" fontSize={9}>
-            {v}
-          </text>
-        </g>
-      ))}
-      <text x={L} y={SPEED_TOP - 4} className="fill-text-main" fontSize={9} fontWeight={600}>
-        차속(km/h)
-      </text>
-      {report.statistics.maxSpeedKmh > 0 ? (
-        <path d={path((i) => yS(points[i]?.speedKmh ?? 0))} fill="none" className="stroke-text-muted" strokeWidth={1} />
-      ) : (
-        <text x={L + 8} y={SPEED_TOP + SPEED_H / 2} className="fill-text-muted" fontSize={9}>
-          미기록(위치정보 미수집)
-        </text>
-      )}
 
       {tT >= t0 && tT <= t1 ? (
         <g data-report-trigger>
@@ -133,12 +111,6 @@ export function VectorChartLegend() {
           <rect width="16" height="10" fill="url(#dual-hatch)" className="stroke-dual-warning" />
         </svg>
         양발 동시 조작(빗금)
-      </li>
-      <li className={item}>
-        <svg width="28" height="10" aria-hidden="true">
-          <line x1="0" y1="5" x2="28" y2="5" className="stroke-text-muted" strokeWidth="1" />
-        </svg>
-        차속(아래 패널)
       </li>
       <li className={item}>
         <svg width="12" height="12" aria-hidden="true">
