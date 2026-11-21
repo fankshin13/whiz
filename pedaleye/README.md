@@ -109,7 +109,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
    | `EVENT_BUFFER_WINDOW_SEC` | `30` | |
    | `PRIVACY_CONTROLLER` · `PRIVACY_OFFICER` · `PRIVACY_CONTACT` · `PRIVACY_EFFECTIVE_DATE` | 회사명 · 보호책임자(성명·직책) · 연락처 · 시행일(YYYY-MM-DD) | `/privacy` 개인정보처리방침 게시 정보. 넷 다 있어야 공개(없으면 '준비 중') |
    | `CRON_HEARTBEAT_URL` | Healthchecks.io 핑 주소(`https://hc-ping.com/…`) | 선택. 자동 정리 결과 신호(아래 "운영 알림") |
-   | `CRON_SECRET` | 무작위 32자 이상 | **Sensitive**. 감사 로그 1년 보존 자동 정리(매월 2일 03:10, `vercel.json` crons). 없으면 자동 정리만 꺼진다 |
+   | `CRON_SECRET` | 무작위 32자 이상 | **Sensitive**. 보관 기간 자동 작업(매월 2일 03:10, `vercel.json` crons): 감사 로그 1년 아카이브 후 삭제, 계정 비활성화 후 1년 익명화, 사고 기록 3년 파기(법적 보존 제외). 없으면 자동 정리만 꺼진다 |
 
    하나라도 빠지거나 형식이 틀리면 Vercel 빌드가 `[CRITICAL]` 오류로 실패한다(설정이 틀린 배포 차단).
 3. 배포 후 확인
@@ -122,7 +122,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
 
 | 감시 대상 | 서비스 | 설정 | 알림 조건 |
 | --- | --- | --- | --- |
-| 감사 로그 자동 정리(매월) | [Healthchecks.io](https://healthchecks.io) | Schedule = Cron `10 18 1 * *`, Time zone `UTC`, Grace Time 1일 → 핑 주소를 Vercel `CRON_HEARTBEAT_URL` 에 넣고 Redeploy | 실패하면 즉시(`/fail` 신호), 실행되지 않으면 유예 시간 뒤 |
+| 보관 기간 자동 작업(매월) | [Healthchecks.io](https://healthchecks.io) | Schedule = Cron `10 18 1 * *`, Time zone `UTC`, Grace Time 1일 → 핑 주소를 Vercel `CRON_HEARTBEAT_URL` 에 넣고 Redeploy | 실패하면 즉시(`/fail` 신호), 실행되지 않으면 유예 시간 뒤 |
 | 서버 상태 `/api/health` | [UptimeRobot](https://uptimerobot.com) | HTTP(s) 모니터, 주소 `https://<주소>/api/health`, 간격 5분 | 200 이 아니면(이상 시 503) |
 
 `/api/health` 감시는 5분마다 DB 를 한 번 조회하므로, 무료 Supabase 프로젝트가 장기간 접속이 없어 일시 중지되는 것도 막는다.

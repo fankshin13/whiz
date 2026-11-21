@@ -34,6 +34,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
   AUDIT_ARCHIVE: "감사 로그 아카이브",
   AUDIT_PURGE: "보존 기간 경과 로그 삭제",
   AUDIT_ARCHIVE_DOWNLOAD: "감사 로그 아카이브 내려받기",
+  USER_ANONYMIZE: "보관 기간 경과 계정 익명화",
+  EVENT_PURGE: "보관 기간 경과 사고 기록 파기",
+  EVENT_LEGAL_HOLD: "사고 기록 법적 보존 표시",
+  EVENT_LEGAL_HOLD_RELEASE: "사고 기록 법적 보존 해제",
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditActionType[];

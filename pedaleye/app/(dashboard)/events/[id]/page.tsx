@@ -6,6 +6,7 @@ import { forbidden } from "next/navigation";
 import { toChartPoints } from "@/components/forensics/chart-point";
 import { ForensicChart } from "@/components/forensics/forensic-chart";
 import { IntegrityBadge, TamperDetail, formatSeoulTime, shortHash } from "@/components/forensics/integrity-badge";
+import { LegalHoldDialog } from "@/components/forensics/legal-hold-dialog";
 import { PacketGrid } from "@/components/forensics/packet-grid";
 import { ReportLink } from "@/components/forensics/report-link";
 import { ReverifyButton } from "@/components/forensics/reverify-button";
@@ -43,6 +44,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   const { data } = result;
   const { verification } = data;
+  const { data: hold } = await (await createClient())
+    .from("event_sessions")
+    .select("legal_hold, legal_hold_reason, legal_hold_at, created_at")
+    .eq("id", data.sessionId)
+    .maybeSingle();
   const points = toChartPoints(data.packets);
 
   return (
@@ -105,6 +111,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       <Section id="grid-heading" title="패킷 데이터">
         <PacketGrid points={points} highlightSeq={verification.failureDetail?.failedSequenceId} />
       </Section>
+
+      {hold ? (
+        <Section id="retention-heading" title="보관">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="m-0">
+              {hold.legal_hold ? (
+                <>
+                  <strong>법적 보존 중</strong> · {hold.legal_hold_reason} ({formatSeoulTime(Date.parse(hold.legal_hold_at ?? hold.created_at)).slice(0, 16)} 표시). 보관 기간이 지나도 파기하지 않습니다.
+                </>
+              ) : (
+                <>생성 후 3년이 지나면 자동 파기됩니다(파기 예정 {formatSeoulTime(Date.parse(hold.created_at) + 3 * 365.25 * 86_400_000).slice(0, 10)}).</>
+              )}
+            </p>
+            {user.role === "super_admin" ? <LegalHoldDialog sessionId={data.sessionId} held={hold.legal_hold} /> : null}
+          </div>
+        </Section>
+      ) : null}
     </>
   );
 }

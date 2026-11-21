@@ -79,14 +79,14 @@ isOneToOne: true
                   ]
                 },"event_sessions": {
                   Row: {
-                    "created_at": string,"device_id": string,"device_seal_signature": string | null,"device_seal_verified": boolean,"device_session_index": number | null,"end_time": string,"final_chain_hash": string,"id": string,"initial_chain_hash": string,"integrity_verified": boolean,"raw_log_storage_path": string | null,"record_count": number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
+                    "created_at": string,"device_id": string,"device_seal_signature": string | null,"device_seal_verified": boolean,"device_session_index": number | null,"end_time": string,"final_chain_hash": string,"id": string,"initial_chain_hash": string,"integrity_verified": boolean,"legal_hold": boolean,"legal_hold_at": string | null,"legal_hold_by": string | null,"legal_hold_reason": string | null,"raw_log_storage_path": string | null,"record_count": number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"device_id": string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time": string,"final_chain_hash": string,"id"?: string,"initial_chain_hash": string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
+                    "created_at"?: string,"device_id": string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time": string,"final_chain_hash": string,"id"?: string,"initial_chain_hash": string,"integrity_verified"?: boolean,"legal_hold"?: boolean,"legal_hold_at"?: string | null,"legal_hold_by"?: string | null,"legal_hold_reason"?: string | null,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time": string,"trigger_type": Database["public"]['Enums']["trigger_type"]
                   }
                   Update: {
-                    "created_at"?: string,"device_id"?: string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time"?: string,"final_chain_hash"?: string,"id"?: string,"initial_chain_hash"?: string,"integrity_verified"?: boolean,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time"?: string,"trigger_type"?: Database["public"]['Enums']["trigger_type"]
+                    "created_at"?: string,"device_id"?: string,"device_seal_signature"?: string | null,"device_seal_verified"?: boolean,"device_session_index"?: number | null,"end_time"?: string,"final_chain_hash"?: string,"id"?: string,"initial_chain_hash"?: string,"integrity_verified"?: boolean,"legal_hold"?: boolean,"legal_hold_at"?: string | null,"legal_hold_by"?: string | null,"legal_hold_reason"?: string | null,"raw_log_storage_path"?: string | null,"record_count"?: number,"start_time"?: string,"trigger_type"?: Database["public"]['Enums']["trigger_type"]
                   }
                   Relationships: [
                     {
@@ -151,14 +151,14 @@ isOneToOne: false
                   ]
                 },"users": {
                   Row: {
-                    "created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"deletion_requested_at": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
+                    "anonymized_at": string | null,"created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"deletion_requested_at": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "anonymized_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "anonymized_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -210,8 +210,16 @@ isOneToOne: false
             "accept_invitation":
 { Args: { "p_token_hash": string,"p_user_id": string }; Returns: Database["public"]['Enums']["user_role"]
                            },
+"anonymize_expired_accounts":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "assign_driver":
 { Args: { "p_reason"?: string,"p_user_id": string,"p_vehicle_id": string }; Returns: Json
+                           },
+"list_expired_event_sessions":
+{ Args: { "p_limit"?: number }; Returns: {
+              "id": string,"raw_log_storage_path": string
+            }[]
                            },
 "log_admin_audit_event":
 { Args: { "p_action_type": Database["public"]['Enums']["audit_action_type"],"p_changes_summary"?: Json,"p_status"?: Database["public"]['Enums']["audit_status"],"p_target_display_name"?: string,"p_target_id": string,"p_target_type": string }; Returns: string
@@ -221,6 +229,9 @@ isOneToOne: false
                            },
 "purge_archived_audit_logs":
 { Args: { "p_actor_id"?: string,"p_archive_id": string }; Returns: number
+                           },
+"purge_event_sessions":
+{ Args: { "p_ids": (string)[] }; Returns: number
                            },
 "record_audit_archive_download":
 { Args: { "p_actor_id": string,"p_archive_id": string }; Returns: undefined
@@ -240,6 +251,9 @@ isOneToOne: false
 "set_device_public_key":
 { Args: { "p_device_id": string,"p_public_key": string,"p_reason": string }; Returns: Json
                            },
+"set_event_legal_hold":
+{ Args: { "p_hold": boolean,"p_reason"?: string,"p_session_id": string }; Returns: undefined
+                           },
 "set_user_active":
 { Args: { "p_active": boolean,"p_demote"?: boolean,"p_reason"?: string,"p_unassign_vehicle"?: boolean,"p_user_id": string }; Returns: Json
                            },
@@ -250,7 +264,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audit_action_type": "ORG_CREATE"|"ORG_UPDATE"|"ORG_DELETE"|"VEHICLE_CREATE"|"VEHICLE_UPDATE"|"VEHICLE_DRIVER_UNASSIGN"|"VEHICLE_DELETE"|"DEVICE_CREATE"|"DEVICE_MOUNT"|"DEVICE_REPLACE"|"DEVICE_UNMOUNT"|"DEVICE_CALIBRATE"|"DEVICE_UPDATE"|"DEVICE_DELETE"|"INVITATION_CREATE"|"INVITATION_ACCEPT"|"INVITATION_CANCEL"|"INVITATION_DELETE"|"USER_DEACTIVATE"|"USER_REACTIVATE"|"USER_ROLE_CHANGE"|"REPORT_VIEW"|"REPORT_DOWNLOAD"|"DEVICE_KEY_REGISTER"|"DEVICE_KEY_UPDATE"|"DEVICE_KEY_REVOKE"|"VEHICLE_DRIVER_ASSIGN"|"AUDIT_ARCHIVE"|"AUDIT_PURGE"|"AUDIT_ARCHIVE_DOWNLOAD","audit_status": "SUCCESS"|"DENIED","organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
+            "audit_action_type": "ORG_CREATE"|"ORG_UPDATE"|"ORG_DELETE"|"VEHICLE_CREATE"|"VEHICLE_UPDATE"|"VEHICLE_DRIVER_UNASSIGN"|"VEHICLE_DELETE"|"DEVICE_CREATE"|"DEVICE_MOUNT"|"DEVICE_REPLACE"|"DEVICE_UNMOUNT"|"DEVICE_CALIBRATE"|"DEVICE_UPDATE"|"DEVICE_DELETE"|"INVITATION_CREATE"|"INVITATION_ACCEPT"|"INVITATION_CANCEL"|"INVITATION_DELETE"|"USER_DEACTIVATE"|"USER_REACTIVATE"|"USER_ROLE_CHANGE"|"REPORT_VIEW"|"REPORT_DOWNLOAD"|"DEVICE_KEY_REGISTER"|"DEVICE_KEY_UPDATE"|"DEVICE_KEY_REVOKE"|"VEHICLE_DRIVER_ASSIGN"|"AUDIT_ARCHIVE"|"AUDIT_PURGE"|"AUDIT_ARCHIVE_DOWNLOAD"|"USER_ANONYMIZE"|"EVENT_PURGE"|"EVENT_LEGAL_HOLD"|"EVENT_LEGAL_HOLD_RELEASE","audit_status": "SUCCESS"|"DENIED","organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -370,7 +384,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audit_action_type": ["ORG_CREATE", "ORG_UPDATE", "ORG_DELETE", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DRIVER_UNASSIGN", "VEHICLE_DELETE", "DEVICE_CREATE", "DEVICE_MOUNT", "DEVICE_REPLACE", "DEVICE_UNMOUNT", "DEVICE_CALIBRATE", "DEVICE_UPDATE", "DEVICE_DELETE", "INVITATION_CREATE", "INVITATION_ACCEPT", "INVITATION_CANCEL", "INVITATION_DELETE", "USER_DEACTIVATE", "USER_REACTIVATE", "USER_ROLE_CHANGE", "REPORT_VIEW", "REPORT_DOWNLOAD", "DEVICE_KEY_REGISTER", "DEVICE_KEY_UPDATE", "DEVICE_KEY_REVOKE", "VEHICLE_DRIVER_ASSIGN", "AUDIT_ARCHIVE", "AUDIT_PURGE", "AUDIT_ARCHIVE_DOWNLOAD"],"audit_status": ["SUCCESS", "DENIED"],"organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
+            "audit_action_type": ["ORG_CREATE", "ORG_UPDATE", "ORG_DELETE", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DRIVER_UNASSIGN", "VEHICLE_DELETE", "DEVICE_CREATE", "DEVICE_MOUNT", "DEVICE_REPLACE", "DEVICE_UNMOUNT", "DEVICE_CALIBRATE", "DEVICE_UPDATE", "DEVICE_DELETE", "INVITATION_CREATE", "INVITATION_ACCEPT", "INVITATION_CANCEL", "INVITATION_DELETE", "USER_DEACTIVATE", "USER_REACTIVATE", "USER_ROLE_CHANGE", "REPORT_VIEW", "REPORT_DOWNLOAD", "DEVICE_KEY_REGISTER", "DEVICE_KEY_UPDATE", "DEVICE_KEY_REVOKE", "VEHICLE_DRIVER_ASSIGN", "AUDIT_ARCHIVE", "AUDIT_PURGE", "AUDIT_ARCHIVE_DOWNLOAD", "USER_ANONYMIZE", "EVENT_PURGE", "EVENT_LEGAL_HOLD", "EVENT_LEGAL_HOLD_RELEASE"],"audit_status": ["SUCCESS", "DENIED"],"organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
           }
         }
 } as const
