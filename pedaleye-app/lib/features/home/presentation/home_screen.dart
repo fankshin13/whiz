@@ -106,6 +106,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       actions: [OutlinedButton(onPressed: _reload, child: const Text('새로고침'))],
                     ),
                   ),
+                const SizedBox(height: AppSpacing.s6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => context.push('/account/delete'),
+                    icon: const Icon(Icons.person_remove_outlined),
+                    label: const Text('계정 삭제 요청'),
+                  ),
+                ),
                 if (AppScope.of(context).sensorMode != null) ...[
                   const SizedBox(height: AppSpacing.s6),
                   Align(

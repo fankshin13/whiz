@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, isDeactivatedSession } from "@/lib/auth/get-current-user";
@@ -33,6 +34,10 @@ export default async function LoginPage({
         </p>
       ) : null}
       <LoginForm redirectTo={requested} />
+      <nav aria-label="이용 안내" className="flex flex-wrap justify-center gap-4 text-caption text-text-muted">
+        <Link href="/privacy" className="underline">개인정보처리방침</Link>
+        <Link href="/account/delete" className="underline">계정 삭제 요청</Link>
+      </nav>
     </>
   );
 }

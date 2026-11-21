@@ -107,6 +107,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
    | `APP_BASE_URL` | `https://<프로젝트>.vercel.app` | 초대 링크·보고서 QR 주소 |
    | `NTP_SERVER_HOST` | `time.google.com` | |
    | `EVENT_BUFFER_WINDOW_SEC` | `30` | |
+   | `PRIVACY_CONTROLLER` · `PRIVACY_OFFICER` · `PRIVACY_CONTACT` · `PRIVACY_EFFECTIVE_DATE` | 회사명 · 보호책임자(성명·직책) · 연락처 · 시행일(YYYY-MM-DD) | `/privacy` 개인정보처리방침 게시 정보. 넷 다 있어야 공개(없으면 '준비 중') |
    | `CRON_HEARTBEAT_URL` | Healthchecks.io 핑 주소(`https://hc-ping.com/…`) | 선택. 자동 정리 결과 신호(아래 "운영 알림") |
    | `CRON_SECRET` | 무작위 32자 이상 | **Sensitive**. 감사 로그 1년 보존 자동 정리(매월 2일 03:10, `vercel.json` crons). 없으면 자동 정리만 꺼진다 |
 

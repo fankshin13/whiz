@@ -151,14 +151,14 @@ isOneToOne: false
                   ]
                 },"users": {
                   Row: {
-                    "created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
+                    "created_at": string,"deactivated_at": string | null,"deactivated_by": string | null,"deletion_requested_at": string | null,"email": string,"id": string,"is_active": boolean,"name": string,"org_id": string | null,"role": Database["public"]['Enums']["user_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email": string,"id": string,"is_active"?: boolean,"name": string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"deactivated_by"?: string | null,"deletion_requested_at"?: string | null,"email"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"org_id"?: string | null,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -230,6 +230,9 @@ isOneToOne: false
                            },
 "reissue_invitation":
 { Args: { "p_expires_in_hours": number,"p_invitation_id": string,"p_token_hash": string }; Returns: Json
+                           },
+"request_account_deletion":
+{ Args: { "p_reason"?: string }; Returns: Json
                            },
 "revoke_invitation":
 { Args: { "p_invitation_id": string,"p_reason"?: string }; Returns: Json

@@ -70,6 +70,18 @@ class FakeAuthRepository implements AuthRepository {
     _changes.add(null);
   }
 
+  int deletionRequests = 0;
+
+  @override
+  Future<void> requestAccountDeletion({required String password, String? reason}) async {
+    final account = accounts.values.where((a) => a.$2 == currentUserId).firstOrNull;
+    if (account == null || account.$1 != password) {
+      throw const AccountDeletionException(AccountDeletionFailure.wrongPassword);
+    }
+    deletionRequests += 1;
+    await signOut();
+  }
+
   @override
   Future<UserRole> fetchRole(String userId) async {
     roleLookups += 1;

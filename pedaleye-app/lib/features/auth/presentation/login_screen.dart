@@ -12,6 +12,7 @@ import '../data/auth_repository.dart';
 const invalidCredentialsMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
 const networkErrorMessage = '서버와 통신할 수 없습니다. 네트워크 연결을 확인해 주세요.';
 const deactivatedMessage = '계정이 비활성화되었습니다. 관리자에게 문의하세요.';
+const deletionRequestedMessage = '계정 삭제 요청이 접수되어 계정이 비활성화되었습니다. 보관 기간이 지나면 남은 정보도 파기됩니다.';
 const unknownSignInMessage = '일시적인 오류로 로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
 
 class LoginScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _busy = false;
   String? _error;
   bool _checkedDeactivated = false;
+  String? _notice;
 
   @override
   void didChangeDependencies() {
@@ -35,7 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
     // 남아 있던 세션이 비활성 계정이라 로그아웃된 경우 한 번 안내한다
     if (!_checkedDeactivated) {
       _checkedDeactivated = true;
-      if (AppScope.of(context).session.takeAccountDeactivated()) _error = deactivatedMessage;
+      final session = AppScope.of(context).session;
+      if (session.takeAccountDeletionRequested()) {
+        _notice = deletionRequestedMessage;
+      } else if (session.takeAccountDeactivated()) {
+        _error = deactivatedMessage;
+      }
     }
   }
 
@@ -84,6 +91,13 @@ class _LoginScreenState extends State<LoginScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.s8),
+          if (_notice != null) ...[
+            Semantics(
+              liveRegion: true,
+              child: Text(_notice!, style: text.bodyLarge, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: AppSpacing.s6),
+          ],
           Form(
             key: _formKey,
             child: AutofillGroup(

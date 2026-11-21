@@ -15,6 +15,11 @@ export const serverEnvSchema = z.object({
   CRON_SECRET: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional()),
   // 자동 작업 결과를 받는 외부 감시 서비스 주소(예: https://hc-ping.com/<uuid>). 없으면 신호를 보내지 않는다.
   CRON_HEARTBEAT_URL: z.preprocess((value) => (value === "" ? undefined : value), z.url({ protocol: /^https$/ }).optional()),
+  // 개인정보처리방침(/privacy) 게시 정보. 넷 다 있어야 공개된다(없으면 '준비 중').
+  PRIVACY_CONTROLLER: z.preprocess((value) => (value === "" ? undefined : value), z.string().max(100).optional()),
+  PRIVACY_OFFICER: z.preprocess((value) => (value === "" ? undefined : value), z.string().max(100).optional()),
+  PRIVACY_CONTACT: z.preprocess((value) => (value === "" ? undefined : value), z.string().max(200).optional()),
+  PRIVACY_EFFECTIVE_DATE: z.preprocess((value) => (value === "" ? undefined : value), z.iso.date().optional()),
   EVENT_BUFFER_WINDOW_SEC: z.coerce.number().int().positive().default(30),
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 });
