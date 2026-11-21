@@ -21,3 +21,8 @@ export function getAppBaseUrl(): string {
 export function getCronSecret(): string | null {
   return validateServerEnv().CRON_SECRET ?? null;
 }
+
+/** 자동 작업 하트비트 주소(외부 감시 서비스). 설정하지 않으면 null. */
+export function getCronHeartbeatUrl(): string | null {
+  return validateServerEnv().CRON_HEARTBEAT_URL ?? null;
+}
