@@ -27,9 +27,9 @@ async function deviceSession(startMs: number, index: number, tamper = false) {
     brakeDistance: i >= 300 ? 9500 : 13000,
     brakePercent: i >= 300 ? 100 : 0,
     bothPedal: false,
-    latitudeE7: 375665000,
-    longitudeE7: 1269780000,
-    speedDeciKmh: i >= 300 ? 0 : 500,
+    latitudeE7: 0,
+    longitudeE7: 0,
+    speedDeciKmh: 0,
   }));
   const bytes = await buildChainedSession(SERIAL, payloads); // 단말은 일련번호로 체인을 시작한다
   const finalHash = bytes.subarray(bytes.length - 32);

@@ -83,7 +83,13 @@ export function ForensicVectorChart({ report }: { report: ForensicReportData }) 
       <text x={L} y={SPEED_TOP - 4} className="fill-text-main" fontSize={9} fontWeight={600}>
         차속(km/h)
       </text>
-      <path d={path((i) => yS(points[i]?.speedKmh ?? 0))} fill="none" className="stroke-text-muted" strokeWidth={1} />
+      {report.statistics.maxSpeedKmh > 0 ? (
+        <path d={path((i) => yS(points[i]?.speedKmh ?? 0))} fill="none" className="stroke-text-muted" strokeWidth={1} />
+      ) : (
+        <text x={L + 8} y={SPEED_TOP + SPEED_H / 2} className="fill-text-muted" fontSize={9}>
+          미기록(위치정보 미수집)
+        </text>
+      )}
 
       {tT >= t0 && tT <= t1 ? (
         <g data-report-trigger>

@@ -98,9 +98,10 @@ class VirtualPedalEyeDevice {
             brakeDistance: distance(MockPedalGeometry.brakeIdle, MockPedalGeometry.brakeFull, brake),
             brakePercent: (brake * 100).round(),
             bothPedal: false,
-            latitudeE7: 375665000,
-            longitudeE7: 1269780000,
-            speedDeciKmh: brake > 0 ? 0 : (accel > 0 ? 700 : 500),
+            // 위치정보 미수집(규격 v1.1): GPS 위도·경도·속도는 항상 0
+            latitudeE7: 0,
+            longitudeE7: 0,
+            speedDeciKmh: 0,
           );
         }(),
     ];
@@ -151,8 +152,8 @@ class VirtualPedalEyeDevice {
       brakeDistance: distance(MockPedalGeometry.brakeIdle, MockPedalGeometry.brakeFull, brakePress),
       brakePercent: brakePercent,
       bothPedal: accelPercent > 5 && brakePercent > 5,
-      latitudeE7: 375665000,
-      longitudeE7: 1269780000,
+      latitudeE7: 0,
+      longitudeE7: 0,
       speedDeciKmh: 0,
     );
   }

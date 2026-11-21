@@ -28,9 +28,9 @@ beforeAll(async () => {
       brakeDistance: i >= 600 ? 9500 : 13000,
       brakePercent: i >= 600 ? 100 : 0,
       bothPedal: i >= 590 && i < 600,
-      latitudeE7: 375665000,
-      longitudeE7: 1269780000,
-      speedDeciKmh: i >= 600 ? 0 : 500,
+      latitudeE7: 0,
+      longitudeE7: 0,
+      speedDeciKmh: 0,
     })),
   );
   const driver = await signedInClient("driver.a@pedaleye.test");

@@ -33,9 +33,9 @@ async function sessionBytes(deviceId: string, startMs: number) {
       brakeDistance: i >= 600 ? 9500 : 13000,
       brakePercent: i >= 600 ? 100 : 0,
       bothPedal: false,
-      latitudeE7: 375665000,
-      longitudeE7: 1269780000,
-      speedDeciKmh: 500,
+      latitudeE7: 0,
+      longitudeE7: 0,
+      speedDeciKmh: 0,
     })),
   );
 }

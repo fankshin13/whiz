@@ -15,9 +15,6 @@ export interface DriveSegment {
 }
 
 const { accel: A, brake: B } = SIMULATED_GEOMETRY;
-// 서울시청 인근(37.5665, 126.9780)에서 북쪽으로 이동
-const START_LAT_E7 = 375665000;
-const START_LON_E7 = 1269780000;
 
 export function* mockPedalHardwareStream(
   segments: readonly DriveSegment[],
@@ -26,22 +23,21 @@ export function* mockPedalHardwareStream(
 ): Generator<SensorSample> {
   const step = 1000 / rateHz;
   let t = startMs;
-  let latitude = START_LAT_E7;
   for (const segment of segments) {
     const end = t + segment.durationMs;
     for (; t < end; t += step) {
       const accelDistance = Math.round(A.idle - segment.accel * (A.idle - A.full));
       const brakeDistance = Math.round(B.idle - segment.brake * (B.idle - B.full));
-      latitude += Math.round((segment.speedKmh / 3.6) * (step / 1000) * 90); // 약 1m ≈ 90 (1e-7°)
       yield {
         timestampMs: Math.round(t),
         accelDistance,
         accelPercent: calculatePedalPercentage(accelDistance, A.full, A.idle),
         brakeDistance,
         brakePercent: calculatePedalPercentage(brakeDistance, B.full, B.idle),
-        latitudeE7: latitude,
-        longitudeE7: START_LON_E7,
-        speedDeciKmh: Math.round(segment.speedKmh * 10),
+        // 위치정보 미수집(규격 v1.1): GPS 위도·경도·속도는 항상 0
+        latitudeE7: 0,
+        longitudeE7: 0,
+        speedDeciKmh: 0,
         impactG: segment.impactG,
       };
     }

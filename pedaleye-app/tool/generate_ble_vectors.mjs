@@ -70,11 +70,12 @@ function chain(serial, frames) {
 }
 
 const T0 = 1794900000000; // 2026-11-17 경
-const base = { latitudeE7: 375665000, longitudeE7: 1269780000 };
+// 위치정보 미수집(규격 v1.1): GPS 위도·경도·속도는 항상 0
+const base = { latitudeE7: 0, longitudeE7: 0, speedDeciKmh: 0 };
 const realtimeFrames = [
-  { name: "가속 100%", timestampMs: T0, accelDistance: 8050, accelPercent: 100, brakeDistance: 13000, brakePercent: 0, bothPedal: false, speedDeciKmh: 520, ...base },
-  { name: "제동 100%", timestampMs: T0 + 50, accelDistance: 12050, accelPercent: 0, brakeDistance: 9500, brakePercent: 100, bothPedal: false, speedDeciKmh: 515, ...base },
-  { name: "양발 동시", timestampMs: T0 + 100, accelDistance: 10050, accelPercent: 50, brakeDistance: 11250, brakePercent: 50, bothPedal: true, speedDeciKmh: 510, ...base },
+  { name: "가속 100%", timestampMs: T0, accelDistance: 8050, accelPercent: 100, brakeDistance: 13000, brakePercent: 0, bothPedal: false, ...base },
+  { name: "제동 100%", timestampMs: T0 + 50, accelDistance: 12050, accelPercent: 0, brakeDistance: 9500, brakePercent: 100, bothPedal: false, ...base },
+  { name: "양발 동시", timestampMs: T0 + 100, accelDistance: 10050, accelPercent: 50, brakeDistance: 11250, brakePercent: 50, bothPedal: true, ...base },
 ];
 const realtime = chain(SERIAL, realtimeFrames.map(({ name: _n, ...f }) => f));
 realtime.packets.forEach((p, i) => (p.name = realtimeFrames[i].name));
@@ -102,7 +103,7 @@ const sessionFrames = Array.from({ length: 6 }, (_, i) => ({
   brakeDistance: i >= 3 ? 13000 - (i - 2) * 1000 : 13000,
   brakePercent: i >= 3 ? (i - 2) * 30 : 0,
   bothPedal: false,
-  speedDeciKmh: 600 - i * 10,
+  speedDeciKmh: 0,
   ...base,
 }));
 const session = chain(SERIAL, sessionFrames);
@@ -162,7 +163,7 @@ const ack = (type, seq) => {
 };
 
 const vectors = {
-  protocolVersion: "1.0",
+  protocolVersion: "1.1",
   note: "시험 전용 키·데이터. 실제 단말·운영에 쓰지 말 것. 생성: node tool/generate_ble_vectors.mjs",
   serial: SERIAL,
   crc: { input: hex(Buffer.from("123456789")), crc8: crc8(Buffer.from("123456789")), crc32: crc32(Buffer.from("123456789")) },
