@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "audit_logs": {
+            "audit_log_archives": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"cutoff": string,"file_sha256": string,"file_size": number,"id": string,"newest_at": string,"oldest_at": string,"purged_at": string | null,"purged_count": number | null,"row_count": number,"rows_digest": string,"storage_path": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"cutoff": string,"file_sha256": string,"file_size": number,"id"?: string,"newest_at": string,"oldest_at": string,"purged_at"?: string | null,"purged_count"?: number | null,"row_count": number,"rows_digest": string,"storage_path": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"cutoff"?: string,"file_sha256"?: string,"file_size"?: number,"id"?: string,"newest_at"?: string,"oldest_at"?: string,"purged_at"?: string | null,"purged_count"?: number | null,"row_count"?: number,"rows_digest"?: string,"storage_path"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"audit_logs": {
                   Row: {
                     "action_type": Database["public"]['Enums']["audit_action_type"],"actor_id": string | null,"actor_name": string,"actor_role": Database["public"]['Enums']["user_role"] | null,"changes_summary": NonNullable<Json>,"created_at": string,"id": string,"ip_address": string,"org_id": string | null,"status": Database["public"]['Enums']["audit_status"],"target_display_name": string,"target_id": string,"target_type": string
                   }
@@ -205,6 +219,15 @@ isOneToOne: false
 "mount_device":
 { Args: { "p_device_id": string,"p_replace"?: boolean,"p_vehicle_id": string }; Returns: Json
                            },
+"purge_archived_audit_logs":
+{ Args: { "p_actor_id"?: string,"p_archive_id": string }; Returns: number
+                           },
+"record_audit_archive_download":
+{ Args: { "p_actor_id": string,"p_archive_id": string }; Returns: undefined
+                           },
+"register_audit_archive":
+{ Args: { "p_actor_id"?: string,"p_cutoff": string,"p_file_sha256": string,"p_file_size": number,"p_row_count": number,"p_storage_path": string }; Returns: string
+                           },
 "reissue_invitation":
 { Args: { "p_expires_in_hours": number,"p_invitation_id": string,"p_token_hash": string }; Returns: Json
                            },
@@ -224,7 +247,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "audit_action_type": "ORG_CREATE"|"ORG_UPDATE"|"ORG_DELETE"|"VEHICLE_CREATE"|"VEHICLE_UPDATE"|"VEHICLE_DRIVER_UNASSIGN"|"VEHICLE_DELETE"|"DEVICE_CREATE"|"DEVICE_MOUNT"|"DEVICE_REPLACE"|"DEVICE_UNMOUNT"|"DEVICE_CALIBRATE"|"DEVICE_UPDATE"|"DEVICE_DELETE"|"INVITATION_CREATE"|"INVITATION_ACCEPT"|"INVITATION_CANCEL"|"INVITATION_DELETE"|"USER_DEACTIVATE"|"USER_REACTIVATE"|"USER_ROLE_CHANGE"|"REPORT_VIEW"|"REPORT_DOWNLOAD"|"DEVICE_KEY_REGISTER"|"DEVICE_KEY_UPDATE"|"DEVICE_KEY_REVOKE"|"VEHICLE_DRIVER_ASSIGN","audit_status": "SUCCESS"|"DENIED","organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
+            "audit_action_type": "ORG_CREATE"|"ORG_UPDATE"|"ORG_DELETE"|"VEHICLE_CREATE"|"VEHICLE_UPDATE"|"VEHICLE_DRIVER_UNASSIGN"|"VEHICLE_DELETE"|"DEVICE_CREATE"|"DEVICE_MOUNT"|"DEVICE_REPLACE"|"DEVICE_UNMOUNT"|"DEVICE_CALIBRATE"|"DEVICE_UPDATE"|"DEVICE_DELETE"|"INVITATION_CREATE"|"INVITATION_ACCEPT"|"INVITATION_CANCEL"|"INVITATION_DELETE"|"USER_DEACTIVATE"|"USER_REACTIVATE"|"USER_ROLE_CHANGE"|"REPORT_VIEW"|"REPORT_DOWNLOAD"|"DEVICE_KEY_REGISTER"|"DEVICE_KEY_UPDATE"|"DEVICE_KEY_REVOKE"|"VEHICLE_DRIVER_ASSIGN"|"AUDIT_ARCHIVE"|"AUDIT_PURGE"|"AUDIT_ARCHIVE_DOWNLOAD","audit_status": "SUCCESS"|"DENIED","organization_type": "fleet"|"b2g"|"standard","trigger_type": "shock"|"sudden_accel"|"manual"|"periodic","user_role": "super_admin"|"org_admin"|"driver"|"investigator"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -344,7 +367,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "audit_action_type": ["ORG_CREATE", "ORG_UPDATE", "ORG_DELETE", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DRIVER_UNASSIGN", "VEHICLE_DELETE", "DEVICE_CREATE", "DEVICE_MOUNT", "DEVICE_REPLACE", "DEVICE_UNMOUNT", "DEVICE_CALIBRATE", "DEVICE_UPDATE", "DEVICE_DELETE", "INVITATION_CREATE", "INVITATION_ACCEPT", "INVITATION_CANCEL", "INVITATION_DELETE", "USER_DEACTIVATE", "USER_REACTIVATE", "USER_ROLE_CHANGE", "REPORT_VIEW", "REPORT_DOWNLOAD", "DEVICE_KEY_REGISTER", "DEVICE_KEY_UPDATE", "DEVICE_KEY_REVOKE", "VEHICLE_DRIVER_ASSIGN"],"audit_status": ["SUCCESS", "DENIED"],"organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
+            "audit_action_type": ["ORG_CREATE", "ORG_UPDATE", "ORG_DELETE", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DRIVER_UNASSIGN", "VEHICLE_DELETE", "DEVICE_CREATE", "DEVICE_MOUNT", "DEVICE_REPLACE", "DEVICE_UNMOUNT", "DEVICE_CALIBRATE", "DEVICE_UPDATE", "DEVICE_DELETE", "INVITATION_CREATE", "INVITATION_ACCEPT", "INVITATION_CANCEL", "INVITATION_DELETE", "USER_DEACTIVATE", "USER_REACTIVATE", "USER_ROLE_CHANGE", "REPORT_VIEW", "REPORT_DOWNLOAD", "DEVICE_KEY_REGISTER", "DEVICE_KEY_UPDATE", "DEVICE_KEY_REVOKE", "VEHICLE_DRIVER_ASSIGN", "AUDIT_ARCHIVE", "AUDIT_PURGE", "AUDIT_ARCHIVE_DOWNLOAD"],"audit_status": ["SUCCESS", "DENIED"],"organization_type": ["fleet", "b2g", "standard"],"trigger_type": ["shock", "sudden_accel", "manual", "periodic"],"user_role": ["super_admin", "org_admin", "driver", "investigator"]
           }
         }
 } as const

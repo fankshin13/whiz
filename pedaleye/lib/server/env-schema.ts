@@ -11,6 +11,8 @@ export const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_TIMEZONE: z.literal("Asia/Seoul"),
   APP_BASE_URL: z.url().transform((value) => value.replace(/\/+$/, "")),
   NTP_SERVER_HOST: z.string().min(1).default("time.google.com"),
+  // Vercel Cron 이 Authorization: Bearer 로 보내는 값. 없으면 자동 정리(감사 로그 보존)가 꺼진다.
+  CRON_SECRET: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional()),
   EVENT_BUFFER_WINDOW_SEC: z.coerce.number().int().positive().default(30),
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 });

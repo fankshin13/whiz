@@ -11,6 +11,13 @@ const valid = {
 };
 
 describe("validateServerEnv", () => {
+  it("CRON_SECRET 은 선택이며, 빈 값은 미설정으로 보고 짧은 값은 막는다", () => {
+    expect(validateServerEnv(valid).CRON_SECRET).toBeUndefined();
+    expect(validateServerEnv({ ...valid, CRON_SECRET: "" }).CRON_SECRET).toBeUndefined();
+    expect(validateServerEnv({ ...valid, CRON_SECRET: "x".repeat(32) }).CRON_SECRET).toBe("x".repeat(32));
+    expect(() => validateServerEnv({ ...valid, CRON_SECRET: "short" })).toThrow(/CRON_SECRET/);
+  });
+
   it("필수 값이 있으면 기본값을 채워 돌려준다(끝 슬래시 제거)", () => {
     expect(validateServerEnv(valid)).toMatchObject({
       APP_BASE_URL: "https://pedaleye.vercel.app",
