@@ -1,16 +1,20 @@
-import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Download, ScrollText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { AuditDetailDialog, CsvExportButton } from "@/components/audit/audit-client";
+import { RunRetentionDialog } from "@/components/audit/retention-dialog";
 import { EmptyState } from "@/components/page/empty-state";
 import { PageHeader } from "@/components/page/page-header";
 import { RetryAlert } from "@/components/page/retry-alert";
 import { Section } from "@/components/page/section";
 import { AUDIT_ACTION_LABELS, AUDIT_STATUS_LABELS, AUDIT_TARGETS, ROLE_LABELS } from "@/lib/audit/labels";
 import { auditFilterSchema, defaultRange, listAuditLogs, type AuditFilter, type AuditLogRow } from "@/lib/audit/operations";
+import { AUDIT_RETENTION_DAYS, countExpiredAuditLogs, retentionCutoff } from "@/lib/audit/retention";
 import { requireUserForPath, type CurrentUser } from "@/lib/auth/get-current-user";
+import { getCronSecret } from "@/lib/server/env";
+import { createAdminClient } from "@/lib/server/supabase-admin";
 import type { Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,11 +55,12 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         title="감사 로그"
         description={
           user.role === "super_admin"
-            ? "모든 조직의 관리 작업·보고서 열람 기록입니다. 기록은 추가만 되며 누구도 수정하거나 삭제할 수 없습니다."
-            : "우리 조직의 관리 작업·보고서 열람 기록입니다. 기록은 추가만 되며 누구도 수정하거나 삭제할 수 없습니다."
+            ? "모든 조직의 관리 작업·보고서 열람 기록입니다. 기록은 누구도 수정할 수 없으며, 1년이 지나면 아카이브를 남긴 뒤 정리됩니다."
+            : "우리 조직의 관리 작업·보고서 열람 기록입니다. 기록은 누구도 수정할 수 없으며, 1년이 지나면 아카이브를 남긴 뒤 정리됩니다."
         }
         action={<CsvExportButton query={toQuery(filter)} />}
       />
+      <RetentionNotice notice={first(raw.notice)} count={first(raw.count)} />
       <Section id="audit-filter-heading" title="조회 조건">
         <form method="get" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="감사 로그 조회 조건">
           <Field label="시작일" htmlFor="audit-from">
@@ -111,7 +116,101 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <AuditList user={user} filter={filter} />
         </Suspense>
       </Section>
+      {user.role === "super_admin" ? (
+        <Section id="audit-retention-heading" title="보존 관리">
+          <Suspense fallback={<AuditSkeleton />}>
+            <RetentionPanel />
+          </Suspense>
+        </Section>
+      ) : null}
     </>
+  );
+}
+
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+const dateFormat = new Intl.DateTimeFormat("sv-SE", { dateStyle: "short", timeZone: "Asia/Seoul" });
+
+/** 수동 정리 결과 안내(서버 액션이 주소로 넘긴다) */
+function RetentionNotice({ notice, count }: { notice?: string; count?: string }) {
+  let body: string | null = null;
+  if (notice === "retention_nothing") body = "보존 기간이 지난 기록이 없어 정리할 것이 없습니다.";
+  if (notice === "retention_purged") {
+    const n = Number.parseInt(count ?? "", 10);
+    body = `보존 기간이 지난 기록${Number.isFinite(n) ? ` ${n.toLocaleString("ko-KR")}건` : ""}을 아카이브한 뒤 삭제했습니다. 아카이브 파일은 아래 보존 관리에서 내려받을 수 있습니다.`;
+  }
+  if (!body) return null;
+  return (
+    <div role="status" className="flex items-start gap-2 rounded-md border border-border-strong bg-good-bg px-4 py-3 font-semibold text-good">
+      <CheckCircle2 aria-hidden="true" size={20} className="mt-0.5 shrink-0" />
+      <p className="m-0">{body}</p>
+    </div>
+  );
+}
+
+/** 보존 기간·자동 정리 상태·아카이브 목록(슈퍼 관리자) */
+async function RetentionPanel() {
+  const cutoff = retentionCutoff();
+  const cutoffLabel = dateFormat.format(cutoff);
+  let expired: number;
+  let archives: { id: string; created_at: string; cutoff: string; row_count: number; purged_count: number | null; purged_at: string | null; created_by: string | null }[];
+  try {
+    expired = await countExpiredAuditLogs(createAdminClient());
+    const { data, error } = await (await createClient())
+      .from("audit_log_archives")
+      .select("id, created_at, cutoff, row_count, purged_count, purged_at, created_by")
+      .order("created_at", { ascending: false })
+      .limit(12);
+    if (error) throw new Error(error.code);
+    archives = data;
+  } catch (error) {
+    console.error("audit retention panel failed", { message: error instanceof Error ? error.message : "unknown" });
+    return <RetryAlert message="보존 관리 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." />;
+  }
+  const autoOn = getCronSecret() !== null;
+
+  return (
+    <div className="grid gap-4">
+      <dl className="m-0 grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-1 rounded-md border border-border p-3">
+          <dt className="text-caption text-text-muted">보존 기간</dt>
+          <dd className="m-0 font-semibold">{AUDIT_RETENTION_DAYS}일(1년)</dd>
+        </div>
+        <div className="grid gap-1 rounded-md border border-border p-3">
+          <dt className="text-caption text-text-muted">자동 정리</dt>
+          <dd className="m-0 font-semibold">{autoOn ? "매월 2일 03:10 실행" : "꺼짐(CRON_SECRET 미설정)"}</dd>
+        </div>
+        <div className="grid gap-1 rounded-md border border-border p-3">
+          <dt className="text-caption text-text-muted">{cutoffLabel} 이전(보존 기간 경과)</dt>
+          <dd className="m-0 font-semibold tabular-nums">{expired.toLocaleString("ko-KR")}건</dd>
+        </div>
+      </dl>
+      <div className="flex flex-wrap items-center gap-3">
+        <RunRetentionDialog expiredCount={expired} cutoffLabel={cutoffLabel} />
+      </div>
+      {archives.length === 0 ? (
+        <p className="m-0 text-text-muted">아직 만든 아카이브가 없습니다.</p>
+      ) : (
+        <ul className="m-0 grid list-none gap-2 p-0" aria-label="감사 로그 아카이브">
+          {archives.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bg-base p-3">
+              <div className="grid min-w-0 gap-1">
+                <strong>
+                  {dateFormat.format(new Date(a.cutoff))} 이전 기록 {a.row_count.toLocaleString("ko-KR")}건
+                </strong>
+                <span className="text-caption text-text-muted">
+                  {formatTime(a.created_at)} · {a.created_by ? "수동" : "자동"} ·{" "}
+                  {a.purged_at ? `삭제 완료 ${(a.purged_count ?? 0).toLocaleString("ko-KR")}건` : "삭제 중단(기록 불일치 등, 기록은 보존됨)"}
+                </span>
+              </div>
+              <a href={`/admin/audit/archives/${a.id}`} className="btn btn-secondary">
+                <Download aria-hidden="true" size={18} />
+                내려받기
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

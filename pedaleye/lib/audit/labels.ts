@@ -31,6 +31,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
   USER_ROLE_CHANGE: "역할·소속 변경",
   REPORT_VIEW: "보고서 열람",
   REPORT_DOWNLOAD: "보고서 인쇄·저장",
+  AUDIT_ARCHIVE: "감사 로그 아카이브",
+  AUDIT_PURGE: "보존 기간 경과 로그 삭제",
+  AUDIT_ARCHIVE_DOWNLOAD: "감사 로그 아카이브 내려받기",
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditActionType[];
@@ -43,6 +46,7 @@ export const AUDIT_TARGETS = [
   { key: "user", label: "사용자" },
   { key: "invitation", label: "초대" },
   { key: "event_report", label: "보고서" },
+  { key: "audit_archive", label: "감사 로그 보관" },
 ] as const;
 
 export const AUDIT_STATUS_LABELS: Record<AuditStatus, string> = { SUCCESS: "성공", DENIED: "거부" };
@@ -53,3 +57,6 @@ export const ROLE_LABELS: Record<string, string> = {
   driver: "운전자",
   investigator: "사고조사관",
 };
+
+/** 감사 로그 수동 정리 확인 문구(화면과 서버 공용) */
+export const RETENTION_CONFIRM_PHRASE = "아카이브 후 삭제";

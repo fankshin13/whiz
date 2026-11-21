@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { CurrentUser } from "@/lib/auth/get-current-user";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
-import { AUDIT_ACTIONS, AUDIT_TARGETS, type AuditActionType } from "./labels";
+import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS, AUDIT_TARGETS, ROLE_LABELS, type AuditActionType } from "./labels";
 
 type Client = SupabaseClient<Database>;
 type Operator = Pick<CurrentUser, "role" | "orgId">;
@@ -152,6 +152,17 @@ export function auditCsv(rows: AuditLogRow[], labels: { action: (a: AuditActionT
   );
   // UTF-8 BOM: 엑셀에서 한글이 깨지지 않게
   return `﻿${[header.map(csvCell).join(","), ...lines].join("\r\n")}\r\n`;
+}
+
+const csvTimeFormat = new Intl.DateTimeFormat("sv-SE", { dateStyle: "short", timeStyle: "medium", timeZone: "Asia/Seoul" });
+
+/** 화면 표시와 같은 한글 이름·한국 시간으로 CSV 를 만든다(내보내기·보존 아카이브 공용). */
+export function auditCsvKorean(rows: AuditLogRow[]): string {
+  return auditCsv(rows, {
+    action: (a) => AUDIT_ACTION_LABELS[a] ?? a,
+    role: (r) => (r ? (ROLE_LABELS[r] ?? r) : "시스템"),
+    time: (iso) => csvTimeFormat.format(new Date(iso)),
+  });
 }
 
 /** 작업이 권한 부족으로 거부됐으면 DENIED 로 기록한다(서버 액션에서 호출). */

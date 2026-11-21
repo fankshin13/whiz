@@ -16,3 +16,8 @@ export function getServiceRoleKey(): string {
 export function getAppBaseUrl(): string {
   return validateServerEnv().APP_BASE_URL;
 }
+
+/** 자동 작업(Vercel Cron) 인증 값. 설정하지 않으면 null(자동 작업 비활성). */
+export function getCronSecret(): string | null {
+  return validateServerEnv().CRON_SECRET ?? null;
+}

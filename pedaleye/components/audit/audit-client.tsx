@@ -38,7 +38,7 @@ export function AuditDetailDialog({
         <FileSearch aria-hidden="true" size={18} />
         상세
       </button>
-      <ModalDialog id={`audit-${id}`} dialogRef={dialogRef} title={title} description="감사 기록은 수정하거나 삭제할 수 없습니다.">
+      <ModalDialog id={`audit-${id}`} dialogRef={dialogRef} title={title} description="감사 기록은 수정할 수 없으며, 1년이 지나면 아카이브 후 정리됩니다.">
         <dl className="m-0 grid gap-1">
           {meta.map((m) => (
             <div key={m.label} className="flex flex-wrap gap-x-2">

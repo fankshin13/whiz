@@ -6,5 +6,11 @@
   "regions": [
     "icn1"
   ],
-  "ignoreCommand": "[ \"$VERCEL_ENV\" = \"preview\" ]"
+  "ignoreCommand": "[ \"$VERCEL_ENV\" = \"preview\" ]",
+  "crons": [
+    {
+      "path": "/api/cron/audit-retention",
+      "schedule": "10 18 1 * *"
+    }
+  ]
 }

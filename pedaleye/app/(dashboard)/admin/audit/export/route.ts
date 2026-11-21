@@ -1,5 +1,4 @@
-import { AUDIT_ACTION_LABELS, ROLE_LABELS } from "@/lib/audit/labels";
-import { AUDIT_EXPORT_LIMIT, auditCsv, auditFilterSchema, listAuditLogs } from "@/lib/audit/operations";
+import { AUDIT_EXPORT_LIMIT, auditCsvKorean, auditFilterSchema, listAuditLogs } from "@/lib/audit/operations";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { allowedRolesForPath } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -18,11 +17,7 @@ export async function GET(request: Request) {
   const filter = auditFilterSchema.parse({ ...params, page: 1 });
   try {
     const { rows } = await listAuditLogs(await createClient(), user, filter, { limit: AUDIT_EXPORT_LIMIT });
-    const csv = auditCsv(rows, {
-      action: (a) => AUDIT_ACTION_LABELS[a],
-      role: (r) => (r ? (ROLE_LABELS[r] ?? r) : "시스템"),
-      time: (iso) => timeFormat.format(new Date(iso)),
-    });
+    const csv = auditCsvKorean(rows);
     const stamp = timeFormat.format(new Date()).replace(/[-: ]/g, "").replace(/^(\d{8})/, "$1_");
     return new Response(csv, {
       headers: {

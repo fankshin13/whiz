@@ -107,6 +107,7 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
    | `APP_BASE_URL` | `https://<프로젝트>.vercel.app` | 초대 링크·보고서 QR 주소 |
    | `NTP_SERVER_HOST` | `time.google.com` | |
    | `EVENT_BUFFER_WINDOW_SEC` | `30` | |
+   | `CRON_SECRET` | 무작위 32자 이상 | **Sensitive**. 감사 로그 1년 보존 자동 정리(매월 2일 03:10, `vercel.json` crons). 없으면 자동 정리만 꺼진다 |
 
    하나라도 빠지거나 형식이 틀리면 Vercel 빌드가 `[CRITICAL]` 오류로 실패한다(설정이 틀린 배포 차단).
 3. 배포 후 확인
