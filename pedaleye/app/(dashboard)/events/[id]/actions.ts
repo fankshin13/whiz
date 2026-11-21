@@ -28,3 +28,24 @@ export async function verifySessionIntegrityAction(sessionId: string): Promise<R
       : `재검증 완료: 해시 체인 불일치(변조 감지) · 패킷 #${verification.failureDetail?.failedSequenceId ?? "?"}`,
   };
 }
+
+export type LegalHoldState = { ok: null } | { ok: false; error: string };
+
+/** 법적 보존 표시·해제(슈퍼 관리자, 표시할 때 사유 필수). 표시된 기록은 3년 보관 기간이 지나도 파기되지 않는다. */
+export async function setLegalHoldAction(_prev: LegalHoldState, formData: FormData): Promise<LegalHoldState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다. 다시 로그인해 주세요." };
+  if (user.role !== "super_admin") return { ok: false, error: "슈퍼 관리자만 법적 보존을 바꿀 수 있습니다." };
+  const sessionId = String(formData.get("sessionId") ?? "").slice(0, 64);
+  const hold = formData.get("hold") === "true";
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
+  if (hold && !reason) return { ok: false, error: "보존 사유를 입력해 주세요. 예: 사건번호, 소송·수사 기관" };
+
+  const { error } = await (await createClient()).rpc("set_event_legal_hold", { p_session_id: sessionId, p_hold: hold, p_reason: reason || undefined });
+  if (error) {
+    console.error("legal hold update failed", { code: error.code });
+    return { ok: false, error: "법적 보존 상태를 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
+  revalidatePath(`/events/${sessionId}`);
+  return { ok: null };
+}
