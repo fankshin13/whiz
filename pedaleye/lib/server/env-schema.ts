@@ -13,6 +13,8 @@ export const serverEnvSchema = z.object({
   NTP_SERVER_HOST: z.string().min(1).default("time.google.com"),
   // Vercel Cron 이 Authorization: Bearer 로 보내는 값. 없으면 자동 정리(감사 로그 보존)가 꺼진다.
   CRON_SECRET: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(16).optional()),
+  // 자동 작업 결과를 받는 외부 감시 서비스 주소(예: https://hc-ping.com/<uuid>). 없으면 신호를 보내지 않는다.
+  CRON_HEARTBEAT_URL: z.preprocess((value) => (value === "" ? undefined : value), z.url({ protocol: /^https$/ }).optional()),
   EVENT_BUFFER_WINDOW_SEC: z.coerce.number().int().positive().default(30),
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 });

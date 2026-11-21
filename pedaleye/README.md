@@ -107,9 +107,21 @@ DB(RLS: 배정 차량 → 단말 → 세션·원본 파일)와 `loadSessionForen
    | `APP_BASE_URL` | `https://<프로젝트>.vercel.app` | 초대 링크·보고서 QR 주소 |
    | `NTP_SERVER_HOST` | `time.google.com` | |
    | `EVENT_BUFFER_WINDOW_SEC` | `30` | |
+   | `CRON_HEARTBEAT_URL` | Healthchecks.io 핑 주소(`https://hc-ping.com/…`) | 선택. 자동 정리 결과 신호(아래 "운영 알림") |
    | `CRON_SECRET` | 무작위 32자 이상 | **Sensitive**. 감사 로그 1년 보존 자동 정리(매월 2일 03:10, `vercel.json` crons). 없으면 자동 정리만 꺼진다 |
 
    하나라도 빠지거나 형식이 틀리면 Vercel 빌드가 `[CRITICAL]` 오류로 실패한다(설정이 틀린 배포 차단).
 3. 배포 후 확인
    - `https://<주소>/api/health` → HTTP 200, `{"status":"healthy","database":"connected","timezone":"Asia/Seoul"}`
    - 첫 슈퍼 관리자로 로그인 → 조직·차량 등록 → 운전자 초대 링크 발급
+
+## 운영 알림(메일)
+
+앱은 메일을 직접 보내지 않는다. 외부 무료 감시 서비스가 신호를 지켜보다가 이상하면 메일을 보낸다. 받는 메일 주소는 감시 서비스에만 넣고 저장소에는 남기지 않는다.
+
+| 감시 대상 | 서비스 | 설정 | 알림 조건 |
+| --- | --- | --- | --- |
+| 감사 로그 자동 정리(매월) | [Healthchecks.io](https://healthchecks.io) | Schedule = Cron `10 18 1 * *`, Time zone `UTC`, Grace Time 1일 → 핑 주소를 Vercel `CRON_HEARTBEAT_URL` 에 넣고 Redeploy | 실패하면 즉시(`/fail` 신호), 실행되지 않으면 유예 시간 뒤 |
+| 서버 상태 `/api/health` | [UptimeRobot](https://uptimerobot.com) | HTTP(s) 모니터, 주소 `https://<주소>/api/health`, 간격 5분 | 200 이 아니면(이상 시 503) |
+
+`/api/health` 감시는 5분마다 DB 를 한 번 조회하므로, 무료 Supabase 프로젝트가 장기간 접속이 없어 일시 중지되는 것도 막는다.
